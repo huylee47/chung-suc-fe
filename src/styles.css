@@ -9,6 +9,7 @@ main { width: min(1240px, calc(100% - 40px)); margin: 0 auto; }.hero { display: 
 .payment-qr { display: block; width: min(260px, 100%); aspect-ratio: 1; margin: 2px auto 6px; border-radius: 16px; background: #fff; box-shadow: 0 12px 28px rgba(7, 89, 133, .12); }
 .payment-details { display: grid; gap: 3px; }
 .payment-details p { margin: 0; color: var(--muted); font-size: 13px; }
+.field-hint { color: var(--muted); font-size: 11px; font-weight: 500; }
 .payment-details strong { display: block; padding: 11px 12px; border: 1px solid #bae6fd; border-radius: 10px; color: var(--blue-strong); background: #fff; text-align: center; letter-spacing: .08em; }
 .support-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid #d6edf9; color: var(--muted); font-size: 12px; }
 .support-box span { margin-right: auto; font-weight: 700; }
