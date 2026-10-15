@@ -4,7 +4,7 @@ const defaultApiUrl = typeof window !== 'undefined' && !['localhost', '127.0.0.1
 export const API_URL = import.meta.env.VITE_API_URL ?? defaultApiUrl;
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, { headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) }, ...options });
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) } });
   const raw = await response.text();
   let body: T & { message?: string } | null = null;
   try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
