@@ -1,7 +1,8 @@
 (function () {
-  const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:4000/api'
-    : '/api';
+  let parentApi;
+  try { parentApi = window.top && window.top !== window ? window.top.__CHUNGSUCLIQI_API_URL__ : undefined; } catch (_) { parentApi = undefined; }
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const apiBase = parentApi || (isLocal ? 'http://localhost:4000/api' : 'https://chung-suc-be.onrender.com/api');
 
   const showError = (form, message) => {
     let box = form.querySelector('.err');
@@ -50,7 +51,9 @@
       const response = await fetch(`${apiBase}/auth/${isRegister ? 'register' : 'login'}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
-      const result = await response.json();
+      const raw = await response.text();
+      let result = {};
+      try { result = raw ? JSON.parse(raw) : {}; } catch (_) { result = {}; }
       if (!response.ok) throw new Error(result.message || 'Không thể đăng nhập');
       localStorage.setItem('token', result.data.token);
       window.top.location.href = result.data.user?.role === 'ADMIN' ? '/admin' : '/account';

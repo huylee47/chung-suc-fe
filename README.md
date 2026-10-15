@@ -73,10 +73,14 @@ Nếu dùng Render Static Site:
 - Build command: `pnpm install --frozen-lockfile && pnpm build`
 - Publish directory: `dist`
 - Rewrite: `/*` → `/index.html` để các route React không bị 404.
+- Environment variable: `VITE_API_URL=https://<backend-render>.onrender.com/api`
 
 Nếu dùng Render Web Service chạy Vite Preview:
 
 - Build command: `pnpm install --frozen-lockfile && pnpm build`
 - Start command: `pnpm exec vite preview --host 0.0.0.0 --port $PORT`
+- Environment variable: `VITE_API_URL=https://<backend-render>.onrender.com/api`
 
 `vite.config.ts` đã whitelist hostname `chung-suc-fe.onrender.com`. Khi đổi tên service/domain Render, thêm hostname mới vào `server.allowedHosts` và `preview.allowedHosts`, sau đó redeploy.
+
+Không để `VITE_API_URL` trống trên Render: khi đó FE sẽ fallback về `http://localhost:4000/api`, là localhost của container FE chứ không phải backend.
