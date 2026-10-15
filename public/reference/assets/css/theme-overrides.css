@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
 :root {
   --blue-900: #082f49;
   --blue-800: #075985;
@@ -10,6 +12,8 @@
   --line: #d8e7f0;
   --shadow-blue: 0 16px 40px rgba(7, 89, 133, .10);
 }
+
+body, button, input, select, textarea { font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
 
 body {
   color: var(--ink);

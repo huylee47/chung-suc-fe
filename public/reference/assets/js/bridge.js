@@ -21,6 +21,7 @@
     let isAdmin = false;
     try { isAdmin = token ? JSON.parse(atob(token.split('.')[1])).role === 'ADMIN' : false; } catch (_) {}
     const loggedIn = Boolean(token);
+    document.querySelectorAll('.topnav .navlinks a[href*="profile"]').forEach((link) => { link.hidden = !loggedIn; });
     if (loggedIn) {
       slot.innerHTML = `${isAdmin ? '<a class="auth-btn" href="/admin">Trang quản trị</a>' : '<a class="auth-btn" href="/account">Tài khoản</a>'}<button class="auth-btn pink" type="button" data-logout>Đăng xuất</button>`;
       slot.querySelector('[data-logout]')?.addEventListener('click', () => {
