@@ -65,3 +65,18 @@ server {
 ```
 
 HTTPS FE và API nên dùng hai subdomain riêng, ví dụ `app.<domain>` và `api.<domain>`. Chi tiết Turso, SePay, PM2 và Nginx API nằm trong README của repo BE.
+
+## Deploy trên Render
+
+Nếu dùng Render Static Site:
+
+- Build command: `pnpm install --frozen-lockfile && pnpm build`
+- Publish directory: `dist`
+- Rewrite: `/*` → `/index.html` để các route React không bị 404.
+
+Nếu dùng Render Web Service chạy Vite Preview:
+
+- Build command: `pnpm install --frozen-lockfile && pnpm build`
+- Start command: `pnpm exec vite preview --host 0.0.0.0 --port $PORT`
+
+`vite.config.ts` đã whitelist hostname `chung-suc-fe.onrender.com`. Khi đổi tên service/domain Render, thêm hostname mới vào `server.allowedHosts` và `preview.allowedHosts`, sau đó redeploy.
