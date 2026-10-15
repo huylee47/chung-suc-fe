@@ -81,6 +81,6 @@ Nếu dùng Render Web Service chạy Vite Preview:
 - Start command: `pnpm exec vite preview --host 0.0.0.0 --port $PORT`
 - Environment variable: `VITE_API_URL=https://<backend-render>.onrender.com/api`
 
-`vite.config.ts` đã whitelist hostname `chung-suc-fe.onrender.com`. Khi đổi tên service/domain Render, thêm hostname mới vào `server.allowedHosts` và `preview.allowedHosts`, sau đó redeploy.
+`vite.config.ts` dùng `allowedHosts: true` cho server preview để domain custom mới không bị chặn bởi Vite. Việc này chỉ phù hợp khi chạy sau reverse proxy/HTTPS của Render; không mở Vite preview trực tiếp ra Internet.
 
 Không để `VITE_API_URL` trống trên Render: khi đó FE sẽ fallback về `http://localhost:4000/api`, là localhost của container FE chứ không phải backend.
