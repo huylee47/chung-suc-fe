@@ -31,24 +31,49 @@
     }
   };
 
+  const removeField = (input) => {
+    if (!input) return;
+    const label = input.previousElementSibling;
+    if (label?.tagName === 'LABEL') label.remove();
+    input.remove();
+  };
+  document.querySelectorAll('form').forEach((form) => {
+    const username = form.querySelector('[name="username"]');
+    const email = form.querySelector('[name="email"]');
+    if (username) {
+      form.dataset.authMode = 'register';
+      removeField(email);
+      removeField(form.querySelector('[name="phone"]'));
+      removeField(form.querySelector('[name="password2"]'));
+      form.querySelector('[name="remember"]')?.closest('label')?.remove();
+    } else if (email) {
+      form.dataset.authMode = 'login';
+      email.type = 'text';
+      email.name = 'username';
+      email.placeholder = 'Tên đăng nhập';
+      email.autocomplete = 'username';
+      if (email.previousElementSibling?.tagName === 'LABEL') email.previousElementSibling.textContent = 'Tên đăng nhập';
+    }
+  });
+
   syncAuthHeader();
 
   document.addEventListener('submit', async (event) => {
     const form = event.target.closest('form');
     if (!form) return;
     const password = form.querySelector('[name="password"]');
-    const email = form.querySelector('[name="email"]');
-    if (!password || !email) return;
+    const username = form.querySelector('[name="username"]');
+    if (!password || !username) return;
 
     event.preventDefault();
     const submit = form.querySelector('button[type="submit"], button:not(.eye)');
     if (submit) { submit.disabled = true; submit.textContent = 'Đang xử lý...'; }
 
     try {
-      const isRegister = Boolean(form.querySelector('[name="username"]'));
+      const isRegister = form.dataset.authMode === 'register';
       const payload = isRegister
-        ? { username: form.querySelector('[name="username"]')?.value, email: email.value, phone: form.querySelector('[name="phone"]')?.value, password: password.value }
-        : { email: email.value, password: password.value };
+        ? { username: username.value, password: password.value }
+        : { username: username.value, password: password.value };
       const response = await fetch(`${apiBase}/auth/${isRegister ? 'register' : 'login'}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });

@@ -8,7 +8,14 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const raw = await response.text();
   let body: T & { message?: string } | null = null;
   try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
-  if (!response.ok) throw new Error(body?.message ?? `Có lỗi kết nối (${response.status})`);
+  if (!response.ok) {
+    if (response.status === 401 && path !== '/auth/login' && path !== '/auth/register') {
+      localStorage.removeItem('token');
+      window.dispatchEvent(new Event('auth-changed'));
+      window.location.href = '/login';
+    }
+    throw new Error(body?.message ?? `Có lỗi kết nối (${response.status})`);
+  }
   if (!body) throw new Error('Máy chủ trả về dữ liệu rỗng');
   return body;
 }
