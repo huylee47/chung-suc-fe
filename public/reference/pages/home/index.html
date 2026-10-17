@@ -608,17 +608,23 @@ document.addEventListener('keydown', e => {
 </div>
 <header class="topnav">
   <div class="wrap">
-    <a class="brand" href="index-2.html"><img src="../../assets/img/logo.jpg" alt="logo"><span>BINAOV.SHOP</span></a>
+    <a class="brand" href="index-2.html" style="display:flex;align-items:center;gap:12px;">
+      <img src="../../assets/img/logo.jpg" alt="Binaov.shop" style="width:42px;height:42px;border-radius:12px;box-shadow:0 4px 12px rgba(3,105,161,0.25);">
+      <div style="display:flex;flex-direction:column;">
+        <span style="font-size:20px;font-weight:900;letter-spacing:-0.03em;background:linear-gradient(135deg,#0284c7,#075985);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;">BINAOV.SHOP</span>
+        <small style="font-size:10px;font-weight:800;color:#0369a1;letter-spacing:0.04em;">DỊCH VỤ CHUNG SỨC UY TÍN</small>
+      </div>
+    </a>
     <nav class="navlinks">
       <a href="index-2.html">Trang chủ</a>
-      <a href="../auth/login/dang-nhap0ef2.html?next=order.php">Tạo đơn</a>
-      <a href="../auth/login/dang-nhapa7d2.html?next=deposit.php">Nạp tiền</a>
-      <a href="../auth/login/dang-nhapb712.html?next=profile.php">Hồ sơ</a>
+      <a href="/order" target="_top">Tạo đơn</a>
+      <a href="/topup" target="_top">Nạp tiền</a>
+      <a href="/account" target="_top">Hồ sơ</a>
     </nav>
     <div class="account-slot">
-              <a class="auth-btn" href="../auth/login/dang-nhap.html">Đăng nhập</a>
-        <a class="auth-btn pink" href="../auth/register/register.html">Đăng ký</a>
-          </div>
+      <a class="auth-btn" href="/login" target="_top">Đăng nhập</a>
+      <a class="auth-btn pink" href="/register" target="_top">Đăng ký</a>
+    </div>
   </div>
 </header>
 <style>
@@ -639,7 +645,7 @@ document.addEventListener('keydown', e => {
   <div class="wrap">
     <section class="hero rise">
       <div class="hero-copy">
-        <span class="tag">BINAOV.SHOP</span>
+        <span class="tag" style="background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;font-size:13px;font-weight:800;padding:6px 14px;border-radius:999px;letter-spacing:.05em;box-shadow:0 4px 14px rgba(3,105,161,.3);">⚡ BINAOV.SHOP</span>
         <h1>Đặt rương, xong trong 5 phút</h1>
         <p>Chọn gói, dán mã chung sức. Giá CTV rẻ hơn. </p>
         <div class="event-ticker">
@@ -761,38 +767,6 @@ document.addEventListener('keydown', e => {
       </div>
               <div class="card">Đăng nhập để xem đơn chung sức và tài khoản clone. <a href="../auth/login/dang-nhap7d88.html?next=index.php">Đăng nhập</a></div>
           </section>
-
-    <section class="info-grid">
-      <article class="card"><span class="tag">ĐẶT ĐƠN</span><h3>Đặt ngay</h3><p>Nhập mã sự kiện, mỗi dòng một mã.</p><a class="btn btn-pink" href="../auth/login/dang-nhap0ef2.html?next=order.php">Đặt đơn</a></article>
-      <article class="card"><span class="tag">ĐẶT TRƯỚC</span><h3>Chỉ số điện thoại</h3><p>Không cần mã sự kiện.</p><a class="btn btn-line" href="../auth/login/dang-nhap43d5.html?next=order.php%3Fmode%3Dpre">Đặt trước</a></article>
-      <article class="card"><span class="tag">CLONE</span><h3>Mua tài khoản</h3><p>Hết hàng khi số lượng bằng 0.</p><a class="btn btn-line" href="../auth/login/dang-nhapb054.html?next=clone.php">Mua clone</a></article>
-    </section>
-    <section class="compare">
-      <article class="card">
-        <span class="tag">ĐẶT NGAY</span>
-        <h3>Có mã sự kiện</h3>
-        <ul class="ticks"><li>Nhập mỗi dòng một mã</li><li>Trừ Xu ngay theo số mã</li><li>Theo dõi ở hồ sơ và lịch sử</li></ul>
-        <a class="btn btn-pink" href="../auth/login/dang-nhap0ef2.html?next=order.php">Đặt ngay</a>
-      </article>
-      <article class="card">
-        <span class="tag">ĐẶT TRƯỚC</span>
-        <h3>Chỉ số điện thoại</h3>
-        <ul class="ticks"><li>Không cần mã sự kiện</li><li>Vẫn trừ Xu theo 1 gói</li><li>Dùng khi chưa có mã</li></ul>
-        <a class="btn btn-line" href="../auth/login/dang-nhap43d5.html?next=order.php%3Fmode%3Dpre">Đặt trước</a>
-      </article>
-    </section>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Ưu đãi nạp</h3>
-                <p class="muted">Chưa có mốc khuyến mãi.</p>        <a class="btn btn-pink" href="../auth/login/dang-nhapa7d2.html?next=deposit.php">Nạp ngay</a>
-      </div>
-      <div class="card">
-        <h3>Giới thiệu 5%</h3>
-                  <p class="muted">Đăng ký để lấy link giới thiệu. Hoa hồng cộng khi người được giới thiệu tạo đơn.</p>
-          <a class="btn btn-pink" href="../auth/register/register0ef2.html?next=order.php">Đăng ký</a>
-              </div>
-    </div>
 
     <h2>Câu hỏi thường gặp</h2>
     <div class="faq">

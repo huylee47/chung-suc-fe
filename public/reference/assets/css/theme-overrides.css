@@ -23,7 +23,9 @@ body {
 a { color: inherit; }
 .topnav a, .navlinks a, .footer a, .section-head a, .admin-main a:not(.side-link), .account-slot .auth-btn { color: var(--blue-800); }
 .topnav a:hover, .navlinks a:hover, .footer a:hover, .section-head a:hover, .admin-main a:not(.side-link):hover { color: var(--blue-700); }
-.topnav .brand, .topnav .brand span, .admin-sidebar .brand, .admin-sidebar .brand span, .admin-sidebar .side-link { color: #e0f2fe; }
+.topnav .brand span { font-weight: 900; font-size: 20px; background: linear-gradient(135deg, #0284c7, #075985); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -.02em; }
+.admin-sidebar .brand, .admin-sidebar .brand span, .admin-sidebar .side-link { color: #e0f2fe; }
+.burger, .nav-toggle, .mobile-menu { display: none !important; }
 .topnav .brand:hover, .admin-sidebar .brand:hover, .admin-sidebar .side-link:hover { color: #fff; }
 .muted, .sub, .price-card p, .footer a, .footer p { color: var(--muted); }
 .topnav, .admin-topbar { background: rgba(255, 255, 255, .94); border-color: var(--line); }
