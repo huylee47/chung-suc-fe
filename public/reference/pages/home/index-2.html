@@ -469,12 +469,12 @@ body.store-app { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 .auth-btn { display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 12px; border-radius:999px; border:1px solid #dbe7f1; background:#fff; font-weight:800; font-size:13px; white-space:nowrap; position:relative; z-index:5; }
 .auth-btn.pink { background:#0369a1; color:#fff; border-color:#0369a1; }
 .account-slot { flex:0 0 auto; }
-.brand span { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.brand span { max-width:none; overflow:visible; white-space:nowrap; }
 .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
 .stat { background:#fff; border:1px solid #dbe7f1; border-radius:16px; padding:10px; }
 .hero-actions { display:flex; flex-wrap:wrap; gap:8px; }
 @media (max-width: 640px) {
-  .brand span { display:none; }
+  .brand span { display:inline-block; font-size:16px; }
   .hero { padding:16px; }
   .stats { grid-template-columns:repeat(3,1fr); }
   .stat b { font-size:16px; }
