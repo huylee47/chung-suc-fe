@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
-import { ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList, Headphones, LayoutDashboard, LogIn, Menu, Pencil, Phone, Plus, ShieldCheck, Trash2, UserRound, WalletCards, X } from 'lucide-react';
+import { Link, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList, Headphones, LayoutDashboard, LogIn, Pencil, Phone, Plus, ShieldCheck, Trash2, UserRound, WalletCards, X } from 'lucide-react';
 import { api } from './api';
 
 type Product = { id: string; name: string; description: string; price: number; resellerPrice?: number; available: boolean; stock?: number };
 type Order = { id: string; username: string; productName: string; uid: string; quantity: number; total: number; status: string; createdAt: string };
 const phone = '0995438093';
 const zalo = 'https://zalo.me/g/togvaj3kpf1ik1bpaa6w';
+const zaloContact = 'https://zalo.me/0995438093';
 const formatVnd = (value: number) => new Intl.NumberFormat('vi-VN').format(value) + ' Xu';
 function sessionRole() {
   const token = localStorage.getItem('token');
@@ -24,7 +25,50 @@ function PublicShell({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<string | null>(() => sessionRole());
   useEffect(() => { const sync = () => setRole(sessionRole()); window.addEventListener('storage', sync); window.addEventListener('auth-changed', sync); return () => { window.removeEventListener('storage', sync); window.removeEventListener('auth-changed', sync); }; }, []);
   const logout = () => { localStorage.removeItem('token'); window.dispatchEvent(new Event('auth-changed')); window.location.href = '/'; };
-  return <><div className="announcement">Hỗ trợ nhanh qua Zalo · 0995438093</div><header className="topbar"><Link className="brand" to="/"><img src="/logo.jpg" alt="Chungsucliqi" /><span>CHUNGSUCLIQI</span></Link><nav><NavLink to="/">Trang chủ</NavLink><NavLink to="/order">Tạo đơn</NavLink><NavLink to="/topup">Nạp tiền</NavLink>{role && <NavLink to="/account">Tài khoản</NavLink>}</nav>{role ? <div className="session-actions"><Link className="button button-secondary small" to={role === 'ADMIN' ? '/admin' : '/account'}>{role === 'ADMIN' ? 'Trang quản trị' : 'Tài khoản'}</Link><button className="button button-primary small" type="button" onClick={logout}>Đăng xuất</button></div> : <Link className="button button-primary small" to="/login"><LogIn size={16} /> Đăng nhập</Link>}<button className="mobile-menu" aria-label="Mở menu"><Menu size={20} /></button></header>{children}<footer className="footer"><div><div className="brand"><img src="/logo.jpg" alt="Chungsucliqi" /><span>CHUNGSUCLIQI</span></div><p>Đặt dịch vụ nhanh, theo dõi đơn rõ ràng và nạp Xu tự động.</p></div><div><b>Hỗ trợ</b><a href={`tel:${phone}`}><Phone size={15} /> {phone}</a><a href={zalo} target="_blank" rel="noreferrer"><Headphones size={15} /> Zalo Box</a></div><div><b>Liên kết</b><Link to="/order">Tạo đơn</Link><Link to="/topup">Nạp tiền</Link><Link to="/admin">Trang quản trị</Link></div></footer></>;
+  return (
+    <>
+      <div className="announcement">
+        Hỗ trợ nhanh qua <a href={zaloContact} target="_blank" rel="noreferrer">Zalo Admin (Nạp thẻ cào, xử lý lỗi, CSKH): {phone}</a>
+        {' · '}
+        <a href={zalo} target="_blank" rel="noreferrer">Box Zalo: Cập nhật thông tin tin tức, đủ 100 thành viên event tổng 500QH cho 5 khách may mắn và thêm 10 slot rương SS miễn phí</a>
+      </div>
+      <header className="topbar">
+        <Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>BINAOV.SHOP</span></Link>
+        <nav>
+          <NavLink to="/">Trang chủ</NavLink>
+          <NavLink to="/order">Tạo đơn</NavLink>
+          <NavLink to="/topup">Nạp tiền</NavLink>
+          {role && <NavLink to="/account">Tài khoản</NavLink>}
+        </nav>
+        {role ? (
+          <div className="session-actions">
+            <Link className="button button-secondary small" to={role === 'ADMIN' ? '/admin' : '/account'}>{role === 'ADMIN' ? 'Trang quản trị' : 'Tài khoản'}</Link>
+            <button className="button button-primary small" type="button" onClick={logout}>Đăng xuất</button>
+          </div>
+        ) : (
+          <Link className="button button-primary small" to="/login"><LogIn size={16} /> Đăng nhập</Link>
+        )}
+      </header>
+      {children}
+      <footer className="footer">
+        <div>
+          <div className="brand"><img src="/logo.jpg" alt="Bin AOV" /><span>BINAOV.SHOP</span></div>
+          <p>Đặt dịch vụ nhanh, theo dõi đơn rõ ràng và nạp Xu tự động.</p>
+        </div>
+        <div>
+          <b>Hỗ trợ & Liên hệ</b>
+          <a href={zaloContact} target="_blank" rel="noreferrer"><Phone size={15} /> Zalo Admin: {phone} (Nạp thẻ cào, CSKH)</a>
+          <a href={zalo} target="_blank" rel="noreferrer"><Headphones size={15} /> Box Zalo: Sự kiện & Quà tặng</a>
+        </div>
+        <div>
+          <b>Liên kết</b>
+          <Link to="/order">Tạo đơn</Link>
+          <Link to="/topup">Nạp tiền</Link>
+          <Link to="/admin">Trang quản trị</Link>
+        </div>
+      </footer>
+    </>
+  );
 }
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -36,32 +80,143 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 function Home() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   useEffect(() => { api<{ data: Product[] }>('/products').then((result) => setProducts(result.data)).catch(() => undefined); }, []);
   return <PublicShell><main><section className="hero"><div className="hero-copy"><span className="eyebrow">DỊCH VỤ CHUNG SỨC LIÊN QUÂN</span><h1>Đặt rương,<br /><em>xong trong 5 phút.</em></h1><p>Chọn gói, nhập mã sự kiện hoặc UID user. Đơn được chuyển thẳng về trang quản trị để xử lý.</p><div className="actions"><Link className="button button-primary" to="/order">Tạo đơn ngay <ArrowRight size={18} /></Link><Link className="button button-secondary" to="/topup">Nạp tiền</Link></div><div className="trust-row"><span><CheckCircle2 size={16} /> Hỗ trợ 5 phút</span><span><ShieldCheck size={16} /> Đơn được theo dõi</span></div></div><div className="hero-visual"><img src="/chests.jpg" alt="Minh họa dịch vụ chung sức" /><div className="banner-shade"><span className="visual-label">HỆ THỐNG ĐANG HOẠT ĐỘNG</span><strong>Đơn mới được admin xử lý liên tục</strong><span>Nhập đúng UID để đơn chạy nhanh hơn.</span></div></div></section><section className="section"><div className="section-heading"><div><span className="eyebrow">BẢNG GIÁ</span><h2>Dịch vụ đang mở</h2></div><Link to="/order">Xem tất cả <ArrowRight size={16} /></Link></div><div className="product-grid">{products.map((product) => <article className="product-card" key={product.id}><div className="product-icon"><WalletCards size={20} /></div><h3>{product.name}</h3><p>{product.description}</p><div className="price-row"><strong>{formatVnd(product.price)}</strong><span>Còn {product.stock ?? 'nhiều'}</span></div><Link className="button button-secondary full" to={`/order?product=${product.id}`}>Đặt ngay <ArrowRight size={16} /></Link></article>)}</div></section><section className="steps"><div><span className="eyebrow">QUY TRÌNH</span><h2>Đơn giản từ lúc nạp đến lúc hoàn tất.</h2></div><div className="step-list"><div><b>01</b><h3>Tạo tài khoản</h3><p>Đăng ký nhanh để lưu lịch sử đơn và số dư.</p></div><div><b>02</b><h3>Nạp Xu</h3><p>Chuyển khoản đúng nội dung, hệ thống tự đồng bộ.</p></div><div><b>03</b><h3>Gửi UID</h3><p>Nhập UID user, admin nhận đơn và cập nhật trạng thái.</p></div></div></section></main></PublicShell>;
 }
 
 function ReferenceHome() {
-  return <iframe className="mockup-frame" title="Chungsucliqi mockup" src="/reference/pages/home/index.html" />;
+  return <iframe className="mockup-frame" title="Binaov mockup" src="/reference/pages/home/index.html" />;
 }
 
 function OrderPage() {
-  const [products, setProducts] = useState<Product[]>(mockProducts); const [productId, setProductId] = useState('chung-suc-1'); const [uid, setUid] = useState(''); const [quantity, setQuantity] = useState(1); const [message, setMessage] = useState('');
-  useEffect(() => { api<{ data: Product[] }>('/products').then((result) => setProducts(result.data)).catch(() => undefined); }, []);
+  const [searchParams] = useSearchParams();
+  const queryProduct = searchParams.get('product') || '';
+  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [productId, setProductId] = useState(queryProduct || 'chung-suc-1');
+  const [uid, setUid] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    api<{ data: Product[] }>('/products').then((result) => {
+      setProducts(result.data);
+      if (queryProduct && result.data.some((p) => p.id === queryProduct)) {
+        setProductId(queryProduct);
+      } else if (result.data.length > 0 && !result.data.some((p) => p.id === productId)) {
+        setProductId(result.data[0].id);
+      }
+    }).catch(() => undefined);
+  }, [queryProduct]);
   const selected = products.find((product) => product.id === productId) ?? products[0];
   const submit = async (event: React.FormEvent) => { event.preventDefault(); const token = localStorage.getItem('token'); if (!token) { setMessage('Bạn cần đăng nhập trước khi gửi đơn.'); return; } try { await api('/orders', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ productId, uid, quantity }) }); setMessage('Đã gửi đơn thành công. Admin đã nhận được UID user của bạn.'); setUid(''); } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể tạo đơn'); } };
   return <PublicShell><main className="page"><div className="page-heading"><div><span className="eyebrow">TẠO ĐƠN</span><h1>Gửi thông tin cho admin.</h1><p>Nhập UID user và chọn gói dịch vụ. Đơn sẽ xuất hiện trong trang quản trị sau khi gửi.</p></div></div><div className="form-layout"><form className="panel form" onSubmit={submit}><label>Sản phẩm<select value={productId} onChange={(event) => setProductId(event.target.value)}>{products.map((product) => <option key={product.id} value={product.id}>{product.name} · {formatVnd(product.price)}</option>)}</select></label><label>UID user<input value={uid} onChange={(event) => setUid(event.target.value)} placeholder="Nhập UID user" required minLength={3} /></label><label>Số lượng<input type="number" min="1" max="99" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} /></label><label>Ghi chú<textarea placeholder="Thông tin thêm cho admin (không bắt buộc)" /></label>{message && <div className="notice success">{message}</div>}<button className="button button-primary" type="submit">Gửi đơn <ArrowRight size={18} /></button></form><aside className="panel summary"><span className="eyebrow">TÓM TẮT</span><h2>{selected?.name}</h2><p>{selected?.description}</p><div className="summary-line"><span>Đơn giá</span><b>{formatVnd(selected?.price ?? 0)}</b></div><div className="summary-line total"><span>Tạm tính</span><b>{formatVnd((selected?.price ?? 0) * quantity)}</b></div><div className="notice">Bạn cần đăng nhập và có đủ số dư trước khi gửi đơn.</div></aside></div></main></PublicShell>;
 }
 
-function TopupPage() { const [amount, setAmount] = useState(100000); const [created, setCreated] = useState<{ transferContent: string; amount: number; bankAccount?: string; bankCode?: string; qrUrl?: string } | null>(null); const [message, setMessage] = useState(''); const createTopup = async () => { const token = localStorage.getItem('token'); if (!token) { setMessage('Bạn cần đăng nhập trước khi tạo lệnh nạp.'); return; } if (!Number.isInteger(amount) || amount < 20000) { setMessage('Số tiền nạp tối thiểu là 20.000 Xu.'); return; } try { const result = await api<{ data: { transferContent: string; amount: number; bankAccount?: string; bankCode?: string; qrUrl?: string } }>('/topups', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ amount }) }); setCreated(result.data); setMessage(''); } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể tạo lệnh nạp'); } }; return <PublicShell><main className="page"><div className="page-heading"><span className="eyebrow">NẠP TIỀN</span><h1>Nạp Xu, đồng bộ tự động.</h1><p>Nhập số tiền muốn nạp, tối thiểu 20.000 Xu, sau đó quét QR để chuyển khoản.</p></div><div className="form-layout"><div className="panel form"><label>Số tiền nạp (Xu)<input type="number" min="20000" step="1000" value={amount} onChange={(event) => { setAmount(Number(event.target.value)); setCreated(null); setMessage(''); }} required /><span className="field-hint">Tối thiểu 20.000 Xu · Nhập bội số 1.000</span></label>{created ? <div className="payment-box"><span className="eyebrow">LỆNH NẠP ĐÃ TẠO</span>{created.qrUrl && <img className="payment-qr" src={created.qrUrl} alt="QR chuyển khoản SePay" />}<div className="payment-details">{created.bankCode && <p>Ngân hàng: <b>{created.bankCode}</b></p>}{created.bankAccount && <p>Số tài khoản: <b>{created.bankAccount}</b></p>}<p>Nội dung chuyển khoản:</p><strong>{created.transferContent}</strong><p>Số tiền cần chuyển: <b>{formatVnd(created.amount)}</b></p></div><div className="support-box"><span>Cần hỗ trợ thanh toán?</span><a className="button button-secondary small" href={zalo} target="_blank" rel="noreferrer"><Headphones size={15} /> Nhắn Zalo</a><a className="support-phone" href={`tel:${phone}`}><Phone size={14} /> {phone}</a></div></div> : <button className="button button-primary" type="button" onClick={createTopup}>Tạo lệnh nạp <ArrowRight size={18} /></button>}{message && <div className="notice error">{message}</div>}</div><aside className="panel summary"><CircleDollarSign size={34} className="accent-icon" /><h2>Đồng bộ theo lệnh nạp</h2><p>Webhook SePay sẽ đối soát mã giao dịch, cộng số dư đúng một lần và lưu lịch sử.</p><div className="notice">Sau khi chuyển khoản, giữ nguyên nội dung QR để hệ thống tự nhận diện.</div></aside></div></main></PublicShell>; }
+function TopupPage() {
+  const token = localStorage.getItem('token');
+  const [amount, setAmount] = useState(100000);
+  const [created, setCreated] = useState<{ transferContent: string; amount: number; bankAccount?: string; bankCode?: string; qrUrl?: string } | null>(null);
+  const [message, setMessage] = useState('');
+  const createTopup = async () => {
+    if (!token) {
+      setMessage('Bạn cần đăng nhập trước khi tạo lệnh nạp tự động.');
+      return;
+    }
+    if (!Number.isInteger(amount) || amount < 20000) {
+      setMessage('Số tiền nạp tối thiểu là 20.000 Xu.');
+      return;
+    }
+    try {
+      const result = await api<{ data: { transferContent: string; amount: number; bankAccount?: string; bankCode?: string; qrUrl?: string } }>('/topups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount })
+      });
+      setCreated(result.data);
+      setMessage('');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Không thể tạo lệnh nạp');
+    }
+  };
+  return (
+    <PublicShell>
+      <main className="page">
+        <div className="page-heading">
+          <span className="eyebrow">NẠP TIỀN</span>
+          <h1>Nạp Xu qua Ngân Hàng</h1>
+          <p>Nhập số tiền muốn nạp (tối thiểu 20.000 Xu), quét mã QR hoặc chuyển khoản đúng nội dung để hệ thống tự động cộng Xu.</p>
+        </div>
+        <div className="form-layout">
+          <div className="panel form">
+            <label>
+              Số tiền nạp (Xu)
+              <input
+                type="number"
+                min="20000"
+                step="1000"
+                value={amount}
+                onChange={(event) => { setAmount(Number(event.target.value)); setCreated(null); setMessage(''); }}
+                required
+              />
+              <span className="field-hint">Tối thiểu 20.000 Xu · Nhập bội số 1.000</span>
+            </label>
+            {!token ? (
+              <div className="payment-box" style={{ background: '#f8fafc', borderColor: '#38bdf8' }}>
+                <span className="eyebrow">NẠP TIỀN TỰ ĐỘNG</span>
+                <p style={{ margin: '4px 0 10px', fontSize: '14px', color: 'var(--muted)' }}>
+                  Đăng nhập tài khoản để nhận mã chuyển khoản riêng và được tự động cộng Xu vào số dư.
+                </p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <Link className="button button-primary" to="/login">Đăng nhập để nạp Xu <LogIn size={16} /></Link>
+                  <Link className="button button-secondary" to="/register">Đăng ký tài khoản</Link>
+                </div>
+              </div>
+            ) : created ? (
+              <div className="payment-box">
+                <span className="eyebrow">LỆNH NẠP ĐÃ TẠO</span>
+                {created.qrUrl && <img className="payment-qr" src={created.qrUrl} alt="QR chuyển khoản SePay" />}
+                <div className="payment-details">
+                  {created.bankCode && <p>Ngân hàng: <b>{created.bankCode}</b></p>}
+                  {created.bankAccount && <p>Số tài khoản: <b>{created.bankAccount}</b></p>}
+                  <p>Nội dung chuyển khoản (bắt buộc):</p>
+                  <strong>{created.transferContent}</strong>
+                  <p>Số tiền cần chuyển: <b>{formatVnd(created.amount)}</b></p>
+                </div>
+                <div className="support-box">
+                  <span>Cần hỗ trợ thanh toán?</span>
+                  <a className="button button-secondary small" href={zalo} target="_blank" rel="noreferrer"><Headphones size={15} /> Nhắn Zalo Admin</a>
+                  <a className="support-phone" href={zaloContact} target="_blank" rel="noreferrer"><Phone size={14} /> {phone}</a>
+                </div>
+              </div>
+            ) : (
+              <button className="button button-primary" type="button" onClick={createTopup}>
+                Tạo lệnh nạp qua QR Ngân Hàng <ArrowRight size={18} />
+              </button>
+            )}
+            {message && <div className="notice error">{message}</div>}
+          </div>
+          <aside className="panel summary">
+            <CircleDollarSign size={34} className="accent-icon" />
+            <h2>Đồng bộ tự động SePay</h2>
+            <p>Webhook SePay sẽ đối soát mã giao dịch, cộng số dư đúng một lần và lưu lịch sử.</p>
+            <div className="notice" style={{ marginBottom: '10px' }}>Sau khi chuyển khoản, giữ nguyên nội dung QR để hệ thống tự nhận diện.</div>
+            <div className="notice" style={{ background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}>
+              <strong>Hỗ trợ thẻ cào:</strong> Bạn có thể nhắn tin trực tiếp <a href={zaloContact} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', fontWeight: 800 }}>Zalo Admin ({phone})</a> để được hỗ trợ nạp thẻ cào và giải quyết lỗi.
+            </div>
+          </aside>
+        </div>
+      </main>
+    </PublicShell>
+  );
+}
 
-function Login() { const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const navigate = useNavigate(); const submit = async (event: React.FormEvent) => { event.preventDefault(); try { const result = await api<{ data: { token: string } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }); localStorage.setItem('token', result.data.token); navigate('/account'); } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại'); } }; return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><span className="brand-mark">CS</span><span>CHUNGSUCLIQI</span></Link><h1>Đăng nhập<br /><em>để tiếp tục.</em></h1><p>Nạp Xu, tạo đơn và theo dõi trạng thái trong một nơi.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TÀI KHOẢN</span><h2>Chào mừng trở lại</h2><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="email@example.com" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Nhập mật khẩu" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Đăng nhập <LogIn size={17} /></button><p className="muted">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p></form></main>; }
+function Login() { const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const navigate = useNavigate(); const submit = async (event: React.FormEvent) => { event.preventDefault(); try { const result = await api<{ data: { token: string } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }); localStorage.setItem('token', result.data.token); navigate('/account'); } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại'); } }; return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><span className="brand-mark">BA</span><span>BINAOV.SHOP</span></Link><h1>Đăng nhập<br /><em>để tiếp tục.</em></h1><p>Nạp Xu, tạo đơn và theo dõi trạng thái trong một nơi.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TÀI KHOẢN</span><h2>Chào mừng trở lại</h2><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="email@example.com" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Nhập mật khẩu" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Đăng nhập <LogIn size={17} /></button><p className="muted">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p></form></main>; }
 
-function Register() { const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const navigate = useNavigate(); const submit = async (event: React.FormEvent) => { event.preventDefault(); try { const result = await api<{ data: { token: string } }>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) }); localStorage.setItem('token', result.data.token); window.dispatchEvent(new Event('auth-changed')); navigate('/account'); } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng ký thất bại'); } }; return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>CHUNGSUCLIQI</span></Link><h1>Mở tài khoản<br /><em>để bắt đầu.</em></h1><p>Chỉ cần tên đăng nhập và mật khẩu để bắt đầu nạp Xu, tạo đơn.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TẠO TÀI KHOẢN</span><h2>Đăng ký</h2><label>Tên đăng nhập<input value={username} onChange={(event) => setUsername(event.target.value)} required minLength={2} maxLength={40} autoComplete="username" placeholder="Ví dụ: bin_aov" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete="new-password" placeholder="Tối thiểu 6 ký tự" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Tạo tài khoản <ArrowRight size={17} /></button><p className="muted">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p></form></main>; }
+function Register() { const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const navigate = useNavigate(); const submit = async (event: React.FormEvent) => { event.preventDefault(); try { const result = await api<{ data: { token: string } }>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) }); localStorage.setItem('token', result.data.token); window.dispatchEvent(new Event('auth-changed')); navigate('/account'); } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng ký thất bại'); } }; return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>BINAOV.SHOP</span></Link><h1>Mở tài khoản<br /><em>để bắt đầu.</em></h1><p>Chỉ cần tên đăng nhập và mật khẩu để bắt đầu nạp Xu, tạo đơn.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TẠO TÀI KHOẢN</span><h2>Đăng ký</h2><label>Tên đăng nhập<input value={username} onChange={(event) => setUsername(event.target.value)} required minLength={2} maxLength={40} autoComplete="username" placeholder="Ví dụ: bin_aov" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete="new-password" placeholder="Tối thiểu 6 ký tự" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Tạo tài khoản <ArrowRight size={17} /></button><p className="muted">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p></form></main>; }
 
 function Account() { const [orders, setOrders] = useState<Order[]>([]); const [balance, setBalance] = useState(0); useEffect(() => { const token = localStorage.getItem('token'); const headers = token ? { Authorization: `Bearer ${token}` } : undefined; Promise.all([api<{ data: Order[] }>('/orders', { headers }), api<{ data: { balance: number } }>('/wallet/balance', { headers })]).then(([orderResult, balanceResult]) => { setOrders(orderResult.data); setBalance(balanceResult.data.balance); }).catch(() => undefined); }, []); return <PublicShell><main className="page"><div className="account-head"><div><span className="eyebrow">TÀI KHOẢN</span><h1>Xin chào, bạn.</h1><p>Quản lý số dư và theo dõi các đơn đã gửi.</p></div><Link className="button button-primary" to="/order"><Plus size={17} /> Tạo đơn</Link></div><div className="account-grid"><div className="balance-card"><span>Số dư khả dụng</span><strong>{formatVnd(balance)}</strong><Link to="/topup">Nạp thêm <ArrowRight size={15} /></Link></div><div className="metric-card"><span>Tổng đơn</span><strong>{orders.length}</strong><small>Đơn đã tạo</small></div><div className="metric-card"><span>Đang xử lý</span><strong>{orders.filter((order) => order.status === 'PROCESSING' || order.status === 'PENDING').length}</strong><small>Cần theo dõi</small></div></div><section className="panel table-panel"><div className="section-heading"><h2>Lịch sử đơn</h2><Link to="/order">Tạo đơn mới <ArrowRight size={15} /></Link></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Dịch vụ</th><th>UID</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.productName}</td><td>{order.uid}</td><td><span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span></td><td>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td></tr>)}</tbody></table></div> : <div className="empty"><ClipboardList size={30} /><b>Chưa có đơn nào</b><span>Tạo đơn đầu tiên để bắt đầu theo dõi.</span></div>}</section></main></PublicShell>; }
 
-function Admin() { const [orders, setOrders] = useState<Order[]>([]); const [period, setPeriod] = useState('month'); const [stats, setStats] = useState({ users: 0, orders: 0, pendingOrders: 0, revenue: 0, topups: 0 }); useEffect(() => { const token = localStorage.getItem('token'); const headers = token ? { Authorization: `Bearer ${token}` } : undefined; Promise.all([api<{ data: Order[] }>('/admin/orders', { headers }), api<{ data: typeof stats }>('/admin/dashboard', { headers })]).then(([orderResult, statResult]) => { setOrders(orderResult.data); setStats(statResult.data); }).catch(() => undefined); }, []); return <div className="admin-layout"><aside className="admin-sidebar"><Link className="brand" to="/"><span className="brand-mark">CS</span><span>CHUNGSUCLIQI</span></Link><span className="sidebar-label">TỔNG QUAN</span><NavLink className="side-link active" to="/admin"><LayoutDashboard size={17} /> Dashboard</NavLink><NavLink className="side-link" to="/admin"><ClipboardList size={17} /> Đơn hàng</NavLink><NavLink className="side-link" to="/admin"><UserRound size={17} /> Người dùng</NavLink><NavLink className="side-link" to="/admin"><WalletCards size={17} /> Nạp tiền</NavLink><span className="sidebar-label">HỆ THỐNG</span><a className="side-link" href={zalo}><Headphones size={17} /> Hỗ trợ Zalo</a></aside><main className="admin-main"><header className="admin-topbar"><div><span className="eyebrow">TRANG QUẢN TRỊ</span><h1>Dashboard</h1></div><Link className="button button-secondary small" to="/"><X size={16} /> Thoát admin</Link></header><div className="periods"><button className={period === 'month' ? 'selected' : ''} onClick={() => setPeriod('month')}>Tháng</button><button className={period === 'quarter' ? 'selected' : ''} onClick={() => setPeriod('quarter')}>Quý</button><button className={period === 'year' ? 'selected' : ''} onClick={() => setPeriod('year')}>Năm</button></div><div className="admin-kpis"><div><span>Người dùng</span><strong>{stats.users}</strong><small>+12% kỳ trước</small></div><div><span>Đơn hàng</span><strong>{stats.orders}</strong><small>{stats.pendingOrders} đơn chờ xử lý</small></div><div><span>Doanh thu</span><strong>{formatVnd(stats.revenue)}</strong><small>Theo {period === 'month' ? 'tháng' : period === 'quarter' ? 'quý' : 'năm'}</small></div><div><span>Đã nạp</span><strong>{formatVnd(stats.topups)}</strong><small>Webhook SePay</small></div></div><div className="admin-content"><section className="panel chart-panel"><div className="section-heading"><div><span className="eyebrow">HIỆU SUẤT</span><h2>Doanh thu theo thời gian</h2></div><BarChart3 className="accent-icon" /></div><div className="chart"><i style={{ height: '42%' }} /><i style={{ height: '65%' }} /><i style={{ height: '54%' }} /><i style={{ height: '82%' }} /><i style={{ height: '68%' }} /><i style={{ height: '92%' }} /><i style={{ height: '75%' }} /><i style={{ height: '100%' }} /></div><div className="chart-labels"><span>T1</span><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>T8</span></div></section><section className="panel table-panel"><div className="section-heading"><div><span className="eyebrow">MỚI NHẤT</span><h2>Đơn cần xử lý</h2></div><Link to="/admin">Xem tất cả <ArrowRight size={15} /></Link></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>Mã</th><th>User</th><th>UID</th><th>Trạng thái</th><th>Tổng</th></tr></thead><tbody>{orders.slice(0, 8).map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.username}</td><td>{order.uid}</td><td><span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span></td><td>{formatVnd(order.total)}</td></tr>)}</tbody></table></div> : <div className="empty"><ClipboardList size={30} /><b>Chưa có đơn mới</b><span>Đơn tạo bằng UID sẽ hiện tại đây.</span></div>}</section></div></main></div>; }
+function Admin() { const [orders, setOrders] = useState<Order[]>([]); const [period, setPeriod] = useState('month'); const [stats, setStats] = useState({ users: 0, orders: 0, pendingOrders: 0, revenue: 0, topups: 0 }); useEffect(() => { const token = localStorage.getItem('token'); const headers = token ? { Authorization: `Bearer ${token}` } : undefined; Promise.all([api<{ data: Order[] }>('/admin/orders', { headers }), api<{ data: typeof stats }>('/admin/dashboard', { headers })]).then(([orderResult, statResult]) => { setOrders(orderResult.data); setStats(statResult.data); }).catch(() => undefined); }, []); return <div className="admin-layout"><aside className="admin-sidebar"><Link className="brand" to="/"><span className="brand-mark">BA</span><span>BINAOV.SHOP</span></Link><span className="sidebar-label">TỔNG QUAN</span><NavLink className="side-link active" to="/admin"><LayoutDashboard size={17} /> Dashboard</NavLink><NavLink className="side-link" to="/admin"><ClipboardList size={17} /> Đơn hàng</NavLink><NavLink className="side-link" to="/admin"><UserRound size={17} /> Người dùng</NavLink><NavLink className="side-link" to="/admin"><WalletCards size={17} /> Nạp tiền</NavLink><span className="sidebar-label">HỆ THỐNG</span><a className="side-link" href={zalo} target="_blank" rel="noreferrer"><Headphones size={17} /> Hỗ trợ Zalo / Box Zalo</a></aside><main className="admin-main"><header className="admin-topbar"><div><span className="eyebrow">TRANG QUẢN TRỊ</span><h1>Dashboard</h1></div><Link className="button button-secondary small" to="/"><X size={16} /> Thoát admin</Link></header><div className="periods"><button className={period === 'month' ? 'selected' : ''} onClick={() => setPeriod('month')}>Tháng</button><button className={period === 'quarter' ? 'selected' : ''} onClick={() => setPeriod('quarter')}>Quý</button><button className={period === 'year' ? 'selected' : ''} onClick={() => setPeriod('year')}>Năm</button></div><div className="admin-kpis"><div><span>Người dùng</span><strong>{stats.users}</strong><small>+12% kỳ trước</small></div><div><span>Đơn hàng</span><strong>{stats.orders}</strong><small>{stats.pendingOrders} đơn chờ xử lý</small></div><div><span>Doanh thu</span><strong>{formatVnd(stats.revenue)}</strong><small>Theo {period === 'month' ? 'tháng' : period === 'quarter' ? 'quý' : 'năm'}</small></div><div><span>Đã nạp</span><strong>{formatVnd(stats.topups)}</strong><small>Webhook SePay</small></div></div><div className="admin-content"><section className="panel chart-panel"><div className="section-heading"><div><span className="eyebrow">HIỆU SUẤT</span><h2>Doanh thu theo thời gian</h2></div><BarChart3 className="accent-icon" /></div><div className="chart"><i style={{ height: '42%' }} /><i style={{ height: '65%' }} /><i style={{ height: '54%' }} /><i style={{ height: '82%' }} /><i style={{ height: '68%' }} /><i style={{ height: '92%' }} /><i style={{ height: '75%' }} /><i style={{ height: '100%' }} /></div><div className="chart-labels"><span>T1</span><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>T8</span></div></section><section className="panel table-panel"><div className="section-heading"><div><span className="eyebrow">MỚI NHẤT</span><h2>Đơn cần xử lý</h2></div><Link to="/admin">Xem tất cả <ArrowRight size={15} /></Link></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>Mã</th><th>User</th><th>UID</th><th>Trạng thái</th><th>Tổng</th></tr></thead><tbody>{orders.slice(0, 8).map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.username}</td><td>{order.uid}</td><td><span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span></td><td>{formatVnd(order.total)}</td></tr>)}</tbody></table></div> : <div className="empty"><ClipboardList size={30} /><b>Chưa có đơn mới</b><span>Đơn tạo bằng UID sẽ hiện tại đây.</span></div>}</section></div></main></div>; }
 
 function LoginGate() {
   const [username, setUsername] = useState('');
@@ -76,7 +231,7 @@ function LoginGate() {
       navigate(result.data.user.role === 'ADMIN' ? '/admin' : '/account');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại'); }
   };
-  return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>CHUNGSUCLIQI</span></Link><h1>Đăng nhập<br /><em>để tiếp tục.</em></h1><p>Nạp Xu, tạo đơn và theo dõi trạng thái trong một nơi.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TÀI KHOẢN</span><h2>Chào mừng trở lại</h2><label>Tên đăng nhập<input value={username} onChange={(event) => setUsername(event.target.value)} required minLength={2} autoComplete="username" placeholder="Tên đăng nhập" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" placeholder="Nhập mật khẩu" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Đăng nhập <LogIn size={17} /></button><p className="muted">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p></form></main>;
+  return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>BINAOV.SHOP</span></Link><h1>Đăng nhập<br /><em>để tiếp tục.</em></h1><p>Nạp Xu, tạo đơn và theo dõi trạng thái trong một nơi.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TÀI KHOẢN</span><h2>Chào mừng trở lại</h2><label>Tên đăng nhập<input value={username} onChange={(event) => setUsername(event.target.value)} required minLength={2} autoComplete="username" placeholder="Tên đăng nhập" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" placeholder="Nhập mật khẩu" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Đăng nhập <LogIn size={17} /></button><p className="muted">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p></form></main>;
 }
 
 function AdminPanel() {
@@ -126,7 +281,7 @@ function AdminPanel() {
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
-        <Link className="brand" to="/"><img src="/logo.jpg" alt="Chungsucliqi" /><span>CHUNGSUCLIQI</span></Link>
+        <Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>BINAOV.SHOP</span></Link>
         <div className="sidebar-section">
           <span className="sidebar-label">QUẢN TRỊ</span>
           {nav.map((item) => (
@@ -136,8 +291,8 @@ function AdminPanel() {
           ))}
         </div>
         <div className="sidebar-footer">
-          <a className="side-link" href={zalo} style={{ margin: 0, width: '100%' }}>
-            <Headphones size={17} /> Hỗ trợ Zalo
+          <a className="side-link" href={zalo} target="_blank" rel="noreferrer" style={{ margin: 0, width: '100%' }}>
+            <Headphones size={17} /> Hỗ trợ Zalo / Box Zalo
           </a>
         </div>
       </aside>
@@ -238,4 +393,4 @@ function ProductManager({ products, headers, onReload }: { products: Product[]; 
   return <div className="product-admin-layout"><section><div className="section-heading"><div><span className="eyebrow">CATALOG</span><h2>Danh sách sản phẩm</h2></div><span className="muted">{products.length} sản phẩm</span></div>{message && <div className="notice error">{message}</div>}<div className="admin-list">{products.length ? products.map((product) => <article className="admin-list-row" key={product.id}><div><span className={`status status-${product.available ? 'completed' : 'cancelled'}`}>{product.available ? 'Đang bán' : 'Đã tắt'}</span><h3>{product.name}</h3><p>{product.description}</p></div><div className="admin-list-meta"><strong>{formatVnd(product.price)}</strong><small>{product.stock == null ? 'Không giới hạn' : `Tồn kho: ${product.stock}`}</small></div><div className="admin-list-actions"><button className="icon-button" type="button" title="Sửa sản phẩm" aria-label={`Sửa ${product.name}`} onClick={() => startEdit(product)}><Pencil size={15} /></button><button className="icon-button" type="button" title={product.available ? 'Tắt sản phẩm' : 'Mở sản phẩm'} aria-label={product.available ? `Tắt ${product.name}` : `Mở ${product.name}`} onClick={() => void toggle(product)}>{product.available ? <X size={16} /> : <Plus size={16} />}</button><button className="icon-button danger" type="button" title="Xoá sản phẩm" aria-label={`Xoá ${product.name}`} onClick={() => void remove(product)}><Trash2 size={15} /></button></div></article>) : <div className="empty"><CircleDollarSign size={30} /><b>Chưa có sản phẩm</b><span>Tạo sản phẩm đầu tiên ở biểu mẫu bên cạnh.</span></div>}</div></section><form className="panel form admin-product-form" onSubmit={submit}><div className="section-heading"><div><span className="eyebrow">{editing ? 'CHỈNH SỬA' : 'SẢN PHẨM MỚI'}</span><h2>{editing ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm'}</h2></div>{editing && <button className="text-button" type="button" onClick={reset}>Huỷ</button>}</div>{!editing && <label>Mã sản phẩm<input value={draft.id} onChange={(event) => change('id', event.target.value)} placeholder="chung-suc-4" required /></label>}<label>Tên sản phẩm<input value={draft.name} onChange={(event) => change('name', event.target.value)} placeholder="Chung sức 4 rương" required /></label><label>Mô tả<textarea value={draft.description} onChange={(event) => change('description', event.target.value)} placeholder="Mô tả ngắn cho khách hàng" required /></label><div className="form-two-col"><label>Giá bán<input type="number" min="0" value={draft.price} onChange={(event) => change('price', event.target.value)} required /></label><label>Giá đại lý<input type="number" min="0" value={draft.resellerPrice} onChange={(event) => change('resellerPrice', event.target.value)} /></label></div><label>Tồn kho<input type="number" min="0" value={draft.stock} onChange={(event) => change('stock', event.target.value)} placeholder="Để trống = không giới hạn" /></label><label className="checkbox-row"><input type="checkbox" checked={draft.available} onChange={(event) => change('available', event.target.checked)} /> Hiển thị sản phẩm</label><button className="button button-primary" type="submit" disabled={saving}>{saving ? 'Đang lưu...' : editing ? 'Lưu thay đổi' : 'Tạo sản phẩm'} <ArrowRight size={17} /></button></form></div>;
 }
 
-export default function App() { return <Routes><Route path="/" element={<ReferenceHome />} /><Route path="/order" element={<RequireAuth><OrderPage /></RequireAuth>} /><Route path="/topup" element={<RequireAuth><TopupPage /></RequireAuth>} /><Route path="/login" element={<LoginGate />} /><Route path="/register" element={<Register />} /><Route path="/account" element={<RequireAuth><Account /></RequireAuth>} /><Route path="/admin" element={<AdminPanel />} /><Route path="*" element={<ReferenceHome />} /></Routes>; }
+export default function App() { return <Routes><Route path="/" element={<ReferenceHome />} /><Route path="/order" element={<RequireAuth><OrderPage /></RequireAuth>} /><Route path="/topup" element={<TopupPage />} /><Route path="/login" element={<LoginGate />} /><Route path="/register" element={<Register />} /><Route path="/account" element={<RequireAuth><Account /></RequireAuth>} /><Route path="/admin" element={<AdminPanel />} /><Route path="*" element={<ReferenceHome />} /></Routes>; }

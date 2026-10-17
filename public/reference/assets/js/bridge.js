@@ -1,18 +1,13 @@
 (function () {
   let parentApi;
-  try { parentApi = window.top && window.top !== window ? window.top.__CHUNGSUCLIQI_API_URL__ : undefined; } catch (_) { parentApi = undefined; }
+  try { parentApi = window.top && window.top !== window ? window.top.__BINAOV_API_URL__ : undefined; } catch (_) { parentApi = undefined; }
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const apiBase = parentApi || (isLocal ? 'http://localhost:4000/api' : 'https://chung-suc-be.onrender.com/api');
 
-  const showError = (form, message) => {
-    let box = form.querySelector('.err');
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'err';
-      form.prepend(box);
-    }
-    box.textContent = message;
-  };
+  const zaloUrl = 'https://zalo.me/g/togvaj3kpf1ik1bpaa6w';
+  const zaloContact = 'https://zalo.me/0995438093';
+
+  const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 
   const syncAuthHeader = () => {
     const slot = document.querySelector('.account-slot');
@@ -23,12 +18,77 @@
     const loggedIn = Boolean(token);
     document.querySelectorAll('.topnav .navlinks a[href*="profile"]').forEach((link) => { link.hidden = !loggedIn; });
     if (loggedIn) {
-      slot.innerHTML = `${isAdmin ? '<a class="auth-btn" href="/admin">Trang quản trị</a>' : '<a class="auth-btn" href="/account">Tài khoản</a>'}<button class="auth-btn pink" type="button" data-logout>Đăng xuất</button>`;
+      slot.innerHTML = `${isAdmin ? '<a class="auth-btn" href="/admin" target="_top">Trang quản trị</a>' : '<a class="auth-btn" href="/account" target="_top">Tài khoản</a>'}<button class="auth-btn pink" type="button" data-logout>Đăng xuất</button>`;
       slot.querySelector('[data-logout]')?.addEventListener('click', () => {
         localStorage.removeItem('token');
-        window.location.reload();
+        if (window.top) window.top.location.reload();
+        else window.location.reload();
       });
     }
+  };
+
+  const renderHomeProducts = async () => {
+    const grids = document.querySelectorAll('.price-grid');
+    if (!grids.length) return;
+    try {
+      const response = await fetch(`${apiBase}/products`);
+      if (!response.ok) return;
+      const json = await response.json();
+      const products = Array.isArray(json.data) ? json.data : [];
+      if (!products.length) {
+        grids.forEach((grid) => {
+          grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 36px 16px; text-align: center; color: var(--muted); font-weight: 700;">Hiện tại chưa có sản phẩm nào đang mở bán.</div>';
+        });
+        return;
+      }
+      const html = products.map((product) => {
+        const isClone = (product.name || '').toLowerCase().includes('clone');
+        const tag = isClone ? 'Acc clone' : 'Chung sức';
+        const priceVnd = new Intl.NumberFormat('vi-VN').format(product.price) + ' Xu';
+        const resellerVnd = product.resellerPrice != null ? new Intl.NumberFormat('vi-VN').format(product.resellerPrice) + ' Xu' : null;
+        const stockText = product.stock != null ? (product.stock > 0 ? `${product.stock} tài khoản` : 'Hết hàng') : 'Còn hàng';
+        return `
+          <article class="price-card">
+            <span class="tag">${tag}</span>
+            <h3>${escapeHtml(product.name)}</h3>
+            <p>${escapeHtml(product.description || '')}</p>
+            <div class="price-row"><span>Giá thường</span><b>${priceVnd}</b></div>
+            ${resellerVnd ? `<div class="price-row"><span>Giá CTV</span><b>${resellerVnd}</b></div>` : ''}
+            <div class="price-row"><span>Số lượng</span><b>${stockText}</b></div>
+            <strong>${priceVnd}</strong>
+            <a class="btn btn-pink" href="/order?product=${encodeURIComponent(product.id)}" target="_top">${isClone ? 'Mua ngay' : 'Đặt ngay'}</a>
+          </article>
+        `;
+      }).join('');
+      grids.forEach((grid) => {
+        grid.innerHTML = html;
+      });
+    } catch (_) {}
+  };
+
+  const wireLinks = () => {
+    document.querySelectorAll('a').forEach((link) => {
+      const href = link.getAttribute('href') || '';
+      const text = (link.textContent || '').toLowerCase();
+      if (href.includes('deposit.php')) {
+        link.href = '/topup';
+        link.target = '_top';
+      } else if (href.includes('order.php')) {
+        link.href = '/order';
+        link.target = '_top';
+      } else if (href.includes('profile.php') || href.includes('history.php')) {
+        link.href = '/account';
+        link.target = '_top';
+      } else if (href.includes('zalo.me') || text.includes('zalo') || text.includes('nhóm')) {
+        link.target = '_blank';
+        link.rel = 'noopener';
+        if (text.includes('0995438093')) {
+          link.href = zaloContact;
+        } else if (!href || href === '#' || href.includes('zalo.me')) {
+          link.href = zaloUrl;
+        }
+      }
+    });
   };
 
   const removeField = (input) => {
@@ -37,6 +97,7 @@
     if (label?.tagName === 'LABEL') label.remove();
     input.remove();
   };
+
   document.querySelectorAll('form').forEach((form) => {
     const username = form.querySelector('[name="username"]');
     const email = form.querySelector('[name="email"]');
@@ -56,7 +117,31 @@
     }
   });
 
+  const showError = (form, message) => {
+    let box = form.querySelector('.err');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'err';
+      form.prepend(box);
+    }
+    box.textContent = message;
+  };
+
   syncAuthHeader();
+  renderHomeProducts();
+  wireLinks();
+
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('a');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href) return;
+    if (href.startsWith('/order') || href.startsWith('/topup') || href.startsWith('/account') || href.startsWith('/admin') || href.startsWith('/login') || href.startsWith('/register')) {
+      event.preventDefault();
+      if (window.top) window.top.location.href = href;
+      else window.location.href = href;
+    }
+  });
 
   document.addEventListener('submit', async (event) => {
     const form = event.target.closest('form');
@@ -71,9 +156,7 @@
 
     try {
       const isRegister = form.dataset.authMode === 'register';
-      const payload = isRegister
-        ? { username: username.value, password: password.value }
-        : { username: username.value, password: password.value };
+      const payload = { username: username.value, password: password.value };
       const response = await fetch(`${apiBase}/auth/${isRegister ? 'register' : 'login'}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
@@ -82,7 +165,11 @@
       try { result = raw ? JSON.parse(raw) : {}; } catch (_) { result = {}; }
       if (!response.ok) throw new Error(result.message || 'Không thể đăng nhập');
       localStorage.setItem('token', result.data.token);
-      window.top.location.href = result.data.user?.role === 'ADMIN' ? '/admin' : '/account';
+      if (window.top) {
+        window.top.location.href = result.data.user?.role === 'ADMIN' ? '/admin' : '/account';
+      } else {
+        window.location.href = result.data.user?.role === 'ADMIN' ? '/admin' : '/account';
+      }
     } catch (error) {
       showError(form, error instanceof Error ? error.message : 'Không thể kết nối máy chủ');
       if (submit) { submit.disabled = false; submit.textContent = 'Thử lại'; }

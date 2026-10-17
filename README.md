@@ -1,4 +1,4 @@
-# chungsucliqi-fe
+# binaov-fe
 
 React + Vite frontend cho dịch vụ Chung Sức Liên Quân.
 
@@ -55,7 +55,7 @@ Nginx cần bật SPA fallback để các route `/login`, `/account`, `/admin` k
 ```nginx
 server {
     server_name <domain-fe>;
-    root /var/www/chungsucliqi-fe/dist;
+    root /var/www/binaov-fe/dist;
     index index.html;
 
     location / {
