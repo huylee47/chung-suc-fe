@@ -4,7 +4,6 @@
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const apiBase = parentApi || (isLocal ? 'http://localhost:4000/api' : 'https://chung-suc-be.onrender.com/api');
 
-  const zaloUrl = 'https://zalo.me/g/togvaj3kpf1ik1bpaa6w';
   const zaloContact = 'https://zalo.me/0995438093';
 
   const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
@@ -79,14 +78,10 @@
       } else if (href.includes('profile.php') || href.includes('history.php')) {
         link.href = '/account';
         link.target = '_top';
-      } else if (href.includes('zalo.me') || text.includes('zalo') || text.includes('nhóm')) {
+      } else if (href.includes('zalo.me') || text.includes('zalo')) {
         link.target = '_blank';
         link.rel = 'noopener';
-        if (text.includes('0995438093')) {
-          link.href = zaloContact;
-        } else if (!href || href === '#' || href.includes('zalo.me')) {
-          link.href = zaloUrl;
-        }
+        link.href = zaloContact;
       }
     });
   };
