@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList, Headphones, LayoutDashboard, LogIn, Pencil, Phone, Plus, ShieldCheck, Trash2, UserRound, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList, Eye, EyeOff, Headphones, LayoutDashboard, LogIn, Pencil, Phone, Plus, ShieldCheck, Trash2, UserRound, WalletCards, X } from 'lucide-react';
 import { api } from './api';
 
 type Product = { id: string; name: string; description: string; price: number; resellerPrice?: number; available: boolean; stock?: number };
@@ -206,28 +206,313 @@ function TopupPage() {
   );
 }
 
-function Login() { const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const navigate = useNavigate(); const submit = async (event: React.FormEvent) => { event.preventDefault(); try { const result = await api<{ data: { token: string } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }); localStorage.setItem('token', result.data.token); navigate('/account'); } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại'); } }; return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><span className="brand-mark">BA</span><span>BINAOV.SHOP</span></Link><h1>Đăng nhập<br /><em>để tiếp tục.</em></h1><p>Nạp Xu, tạo đơn và theo dõi trạng thái trong một nơi.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TÀI KHOẢN</span><h2>Chào mừng trở lại</h2><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="email@example.com" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Nhập mật khẩu" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Đăng nhập <LogIn size={17} /></button><p className="muted">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p></form></main>; }
 
-function Register() { const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const navigate = useNavigate(); const submit = async (event: React.FormEvent) => { event.preventDefault(); try { const result = await api<{ data: { token: string } }>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) }); localStorage.setItem('token', result.data.token); window.dispatchEvent(new Event('auth-changed')); navigate('/account'); } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng ký thất bại'); } }; return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>BINAOV.SHOP</span></Link><h1>Mở tài khoản<br /><em>để bắt đầu.</em></h1><p>Chỉ cần tên đăng nhập và mật khẩu để bắt đầu nạp Xu, tạo đơn.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TẠO TÀI KHOẢN</span><h2>Đăng ký</h2><label>Tên đăng nhập<input value={username} onChange={(event) => setUsername(event.target.value)} required minLength={2} maxLength={40} autoComplete="username" placeholder="Ví dụ: bin_aov" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete="new-password" placeholder="Tối thiểu 6 ký tự" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Tạo tài khoản <ArrowRight size={17} /></button><p className="muted">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p></form></main>; }
+
+function Register() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (loading) return;
+
+    const trimmedUser = username.trim();
+    if (trimmedUser.length < 2) {
+      setMessage('Tên đăng nhập tối thiểu 2 ký tự');
+      return;
+    }
+    if (password.length < 6) {
+      setMessage('Mật khẩu tối thiểu 6 ký tự');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setMessage('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const result = await api<{ data: { token: string } }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username: trimmedUser, password })
+      });
+      localStorage.setItem('token', result.data.token);
+      window.dispatchEvent(new Event('auth-changed'));
+      navigate('/account');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Đăng ký thất bại');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="auth-page">
+      <div className="auth-aside">
+        <div className="auth-aside-top">
+          <Link className="brand" to="/">
+            <img src="/logo.jpg" alt="Bin AOV" />
+            <span>BINAOV.SHOP</span>
+          </Link>
+          <Link to="/" className="auth-back-link">
+            <ArrowLeft size={15} /> Trang chủ
+          </Link>
+        </div>
+        <div className="auth-aside-body">
+          <span className="eyebrow" style={{ color: '#38bdf8' }}>THÀNH VIÊN MỚI</span>
+          <h1>Mở tài khoản<br /><em>trong 30 giây.</em></h1>
+          <p>Chỉ cần tên đăng nhập và mật khẩu để bắt đầu nạp Xu, tạo đơn dịch vụ Chung Sức Liên Quân.</p>
+          <div className="auth-features">
+            <div className="auth-feature-item">
+              <CheckCircle2 size={18} />
+              <span>Lưu số dư và lịch sử đơn hàng an toàn</span>
+            </div>
+            <div className="auth-feature-item">
+              <CheckCircle2 size={18} />
+              <span>Nạp Xu tự động qua mã QR ngân hàng</span>
+            </div>
+            <div className="auth-feature-item">
+              <ShieldCheck size={18} />
+              <span>Hỗ trợ trực tiếp từ Admin BINAOV</span>
+            </div>
+          </div>
+        </div>
+        <div className="auth-aside-foot">
+          Cần hỗ trợ? <a href={zaloContact} target="_blank" rel="noreferrer">Zalo Admin: {phone}</a>
+        </div>
+      </div>
+
+      <div className="auth-panel-wrapper">
+        <form className="auth-card form" onSubmit={submit}>
+          <div className="auth-tabs">
+            <Link to="/login" className="auth-tab">Đăng nhập</Link>
+            <Link to="/register" className="auth-tab active">Đăng ký</Link>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <span className="eyebrow">TẠO TÀI KHOẢN</span>
+            <h2>Đăng ký thành viên</h2>
+            <p className="subtitle">Tạo tài khoản nhanh để trải nghiệm dịch vụ</p>
+          </div>
+
+          <label>
+            Tên đăng nhập
+            <input
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+              minLength={2}
+              maxLength={40}
+              autoComplete="username"
+              placeholder="Ví dụ: binaov_vip"
+              autoFocus
+            />
+            <span className="field-hint">Từ 2 đến 40 ký tự</span>
+          </label>
+
+          <label>
+            Mật khẩu
+            <div className="password-input-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={6}
+                autoComplete="new-password"
+                placeholder="Tối thiểu 6 ký tự"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <span className="field-hint">Tối thiểu 6 ký tự</span>
+          </label>
+
+          <label>
+            Xác nhận mật khẩu
+            <div className="password-input-wrap">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                required
+                minLength={6}
+                autoComplete="new-password"
+                placeholder="Nhập lại mật khẩu"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                title={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </label>
+
+          {message && <div className="notice error">{message}</div>}
+
+          <button className="button button-primary full" type="submit" disabled={loading} style={{ marginTop: '8px' }}>
+            {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'} <ArrowRight size={17} />
+          </button>
+
+          <p className="muted">
+            Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+          </p>
+        </form>
+      </div>
+    </main>
+  );
+}
 
 function Account() { const [orders, setOrders] = useState<Order[]>([]); const [balance, setBalance] = useState(0); useEffect(() => { const token = localStorage.getItem('token'); const headers = token ? { Authorization: `Bearer ${token}` } : undefined; Promise.all([api<{ data: Order[] }>('/orders', { headers }), api<{ data: { balance: number } }>('/wallet/balance', { headers })]).then(([orderResult, balanceResult]) => { setOrders(orderResult.data); setBalance(balanceResult.data.balance); }).catch(() => undefined); }, []); return <PublicShell><main className="page"><div className="account-head"><div><span className="eyebrow">TÀI KHOẢN</span><h1>Xin chào, bạn.</h1><p>Quản lý số dư và theo dõi các đơn đã gửi.</p></div><Link className="button button-primary" to="/order"><Plus size={17} /> Tạo đơn</Link></div><div className="account-grid"><div className="balance-card"><span>Số dư khả dụng</span><strong>{formatVnd(balance)}</strong><Link to="/topup">Nạp thêm <ArrowRight size={15} /></Link></div><div className="metric-card"><span>Tổng đơn</span><strong>{orders.length}</strong><small>Đơn đã tạo</small></div><div className="metric-card"><span>Đang xử lý</span><strong>{orders.filter((order) => order.status === 'PROCESSING' || order.status === 'PENDING').length}</strong><small>Cần theo dõi</small></div></div><section className="panel table-panel"><div className="section-heading"><h2>Lịch sử đơn</h2><Link to="/order">Tạo đơn mới <ArrowRight size={15} /></Link></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Dịch vụ</th><th>UID</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.productName}</td><td>{order.uid}</td><td><span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span></td><td>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td></tr>)}</tbody></table></div> : <div className="empty"><ClipboardList size={30} /><b>Chưa có đơn nào</b><span>Tạo đơn đầu tiên để bắt đầu theo dõi.</span></div>}</section></main></PublicShell>; }
-
-function Admin() { const [orders, setOrders] = useState<Order[]>([]); const [period, setPeriod] = useState('month'); const [stats, setStats] = useState({ users: 0, orders: 0, pendingOrders: 0, revenue: 0, topups: 0 }); useEffect(() => { const token = localStorage.getItem('token'); const headers = token ? { Authorization: `Bearer ${token}` } : undefined; Promise.all([api<{ data: Order[] }>('/admin/orders', { headers }), api<{ data: typeof stats }>('/admin/dashboard', { headers })]).then(([orderResult, statResult]) => { setOrders(orderResult.data); setStats(statResult.data); }).catch(() => undefined); }, []); return <div className="admin-layout"><aside className="admin-sidebar"><Link className="brand" to="/"><span className="brand-mark">BA</span><span>BINAOV.SHOP</span></Link><span className="sidebar-label">TỔNG QUAN</span><NavLink className="side-link active" to="/admin"><LayoutDashboard size={17} /> Dashboard</NavLink><NavLink className="side-link" to="/admin"><ClipboardList size={17} /> Đơn hàng</NavLink><NavLink className="side-link" to="/admin"><UserRound size={17} /> Người dùng</NavLink><NavLink className="side-link" to="/admin"><WalletCards size={17} /> Nạp tiền</NavLink><span className="sidebar-label">HỆ THỐNG</span><a className="side-link" href={zaloContact} target="_blank" rel="noreferrer"><Headphones size={17} /> Hỗ trợ Zalo ({phone})</a></aside><main className="admin-main"><header className="admin-topbar"><div><span className="eyebrow">TRANG QUẢN TRỊ</span><h1>Dashboard</h1></div><Link className="button button-secondary small" to="/"><X size={16} /> Thoát admin</Link></header><div className="periods"><button className={period === 'month' ? 'selected' : ''} onClick={() => setPeriod('month')}>Tháng</button><button className={period === 'quarter' ? 'selected' : ''} onClick={() => setPeriod('quarter')}>Quý</button><button className={period === 'year' ? 'selected' : ''} onClick={() => setPeriod('year')}>Năm</button></div><div className="admin-kpis"><div><span>Người dùng</span><strong>{stats.users}</strong><small>+12% kỳ trước</small></div><div><span>Đơn hàng</span><strong>{stats.orders}</strong><small>{stats.pendingOrders} đơn chờ xử lý</small></div><div><span>Doanh thu</span><strong>{formatVnd(stats.revenue)}</strong><small>Theo {period === 'month' ? 'tháng' : period === 'quarter' ? 'quý' : 'năm'}</small></div><div><span>Đã nạp</span><strong>{formatVnd(stats.topups)}</strong><small>Webhook SePay</small></div></div><div className="admin-content"><section className="panel chart-panel"><div className="section-heading"><div><span className="eyebrow">HIỆU SUẤT</span><h2>Doanh thu theo thời gian</h2></div><BarChart3 className="accent-icon" /></div><div className="chart"><i style={{ height: '42%' }} /><i style={{ height: '65%' }} /><i style={{ height: '54%' }} /><i style={{ height: '82%' }} /><i style={{ height: '68%' }} /><i style={{ height: '92%' }} /><i style={{ height: '75%' }} /><i style={{ height: '100%' }} /></div><div className="chart-labels"><span>T1</span><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>T8</span></div></section><section className="panel table-panel"><div className="section-heading"><div><span className="eyebrow">MỚI NHẤT</span><h2>Đơn cần xử lý</h2></div><Link to="/admin">Xem tất cả <ArrowRight size={15} /></Link></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>Mã</th><th>User</th><th>UID</th><th>Trạng thái</th><th>Tổng</th></tr></thead><tbody>{orders.slice(0, 8).map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.username}</td><td>{order.uid}</td><td><span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span></td><td>{formatVnd(order.total)}</td></tr>)}</tbody></table></div> : <div className="empty"><ClipboardList size={30} /><b>Chưa có đơn mới</b><span>Đơn tạo bằng UID sẽ hiện tại đây.</span></div>}</section></div></main></div>; }
 
 function LoginGate() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (loading) return;
+    setLoading(true);
+    setMessage('');
     try {
-      const result = await api<{ data: { token: string; user: { role: string } } }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-      localStorage.setItem('token', result.data.token); window.dispatchEvent(new Event('auth-changed'));
+      const result = await api<{ data: { token: string; user: { role: string } } }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: username.trim(), password })
+      });
+      localStorage.setItem('token', result.data.token);
+      window.dispatchEvent(new Event('auth-changed'));
       navigate(result.data.user.role === 'ADMIN' ? '/admin' : '/account');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại'); }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại');
+      setLoading(false);
+    }
   };
-  return <main className="auth-page"><div className="auth-aside"><Link className="brand" to="/"><img src="/logo.jpg" alt="Bin AOV" /><span>BINAOV.SHOP</span></Link><h1>Đăng nhập<br /><em>để tiếp tục.</em></h1><p>Nạp Xu, tạo đơn và theo dõi trạng thái trong một nơi.</p></div><form className="auth-card form" onSubmit={submit}><span className="eyebrow">TÀI KHOẢN</span><h2>Chào mừng trở lại</h2><label>Tên đăng nhập<input value={username} onChange={(event) => setUsername(event.target.value)} required minLength={2} autoComplete="username" placeholder="Tên đăng nhập" /></label><label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" placeholder="Nhập mật khẩu" /></label>{message && <div className="notice error">{message}</div>}<button className="button button-primary" type="submit">Đăng nhập <LogIn size={17} /></button><p className="muted">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p></form></main>;
+
+  return (
+    <main className="auth-page">
+      <div className="auth-aside">
+        <div className="auth-aside-top">
+          <Link className="brand" to="/">
+            <img src="/logo.jpg" alt="Bin AOV" />
+            <span>BINAOV.SHOP</span>
+          </Link>
+          <Link to="/" className="auth-back-link">
+            <ArrowLeft size={15} /> Trang chủ
+          </Link>
+        </div>
+        <div className="auth-aside-body">
+          <span className="eyebrow" style={{ color: '#38bdf8' }}>HỆ THỐNG DỊCH VỤ LIÊN QUÂN</span>
+          <h1>Đăng nhập<br /><em>để tiếp tục.</em></h1>
+          <p>Nạp Xu, tạo đơn Chung Sức và theo dõi tiến độ xử lý đơn hàng tự động trong một nơi.</p>
+          <div className="auth-features">
+            <div className="auth-feature-item">
+              <CheckCircle2 size={18} />
+              <span>Xử lý đơn chung sức siêu tốc trong 5 phút</span>
+            </div>
+            <div className="auth-feature-item">
+              <CheckCircle2 size={18} />
+              <span>Nạp Xu tự động 24/7 qua SePay / Thẻ cào</span>
+            </div>
+            <div className="auth-feature-item">
+              <ShieldCheck size={18} />
+              <span>Bảo mật tài khoản &amp; hỗ trợ tận tình</span>
+            </div>
+          </div>
+        </div>
+        <div className="auth-aside-foot">
+          Cần hỗ trợ? <a href={zaloContact} target="_blank" rel="noreferrer">Zalo Admin: {phone}</a>
+        </div>
+      </div>
+
+      <div className="auth-panel-wrapper">
+        <form className="auth-card form" onSubmit={submit}>
+          <div className="auth-tabs">
+            <Link to="/login" className="auth-tab active">Đăng nhập</Link>
+            <Link to="/register" className="auth-tab">Đăng ký</Link>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <span className="eyebrow">TÀI KHOẢN</span>
+            <h2>Chào mừng trở lại</h2>
+            <p className="subtitle">Nhập thông tin tài khoản của bạn để tiếp tục</p>
+          </div>
+
+          <label>
+            Tên đăng nhập
+            <input
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+              minLength={2}
+              autoComplete="username"
+              placeholder="Nhập tên đăng nhập hoặc email"
+              autoFocus
+            />
+          </label>
+
+          <label>
+            Mật khẩu
+            <div className="password-input-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                autoComplete="current-password"
+                placeholder="Nhập mật khẩu"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </label>
+
+          {message && <div className="notice error">{message}</div>}
+
+          <button className="button button-primary full" type="submit" disabled={loading} style={{ marginTop: '8px' }}>
+            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'} <LogIn size={17} />
+          </button>
+
+          <p className="muted">
+            Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+          </p>
+        </form>
+      </div>
+    </main>
+  );
 }
 
 function AdminPanel() {
