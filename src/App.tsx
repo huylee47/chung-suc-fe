@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList,
-  Copy, Crown, Eye, EyeOff, Flame, Gift, Headphones, LayoutDashboard, LogIn,
-  Medal, Pencil, Percent, Phone, Plus, Shield, ShieldCheck, Sparkles, Tag, Ticket, Trash2,
+  AlertCircle, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, Check, CheckCircle2, CircleDollarSign, ClipboardList,
+  Copy, Crown, Eye, EyeOff, Flame, Gift, Headphones, History, LayoutDashboard, LogIn,
+  Medal, Minus, Pencil, Percent, Phone, Plus, Search, Shield, ShieldCheck, Sparkles, Tag, Ticket, Trash2,
   Trophy, UserCheck, UserRound, Users, WalletCards, X
 } from 'lucide-react';
 import { api } from './api';
 
-type Product = { id: string; name: string; description: string; price: number; resellerPrice?: number; available: boolean; stock?: number };
-type Order = {
+export type Product = { id: string; name: string; description: string; price: number; resellerPrice?: number; available: boolean; stock?: number };
+export type Order = {
   id: string;
   username: string;
   productName: string;
@@ -57,6 +57,7 @@ export type UserType = {
 export type AdminUser = {
   id: string;
   username: string;
+  email?: string;
   role: string;
   userType?: string;
   userTypeName?: string;
@@ -64,6 +65,14 @@ export type AdminUser = {
   balance: number;
   status: string;
   createdAt?: string;
+};
+export type WalletLedgerItem = {
+  id: string;
+  userId: string;
+  type: string;
+  amount: number;
+  referenceId: string;
+  createdAt: string;
 };
 
 const phone = '0995438093';
@@ -932,6 +941,7 @@ function Account() {
   const [userProfile, setUserProfile] = useState<{ userType?: string; userTypeName?: string; discountPercent?: number } | null>(null);
   const [vouchers, setVouchers] = useState<Voucher[]>(() => getLocalVouchers().filter((v) => v.active));
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [ledger, setLedger] = useState<WalletLedgerItem[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -945,6 +955,10 @@ function Account() {
       setBalance(balanceResult.data.balance);
       if (meResult?.data) setUserProfile(meResult.data);
     }).catch(() => undefined);
+
+    api<{ data: WalletLedgerItem[] }>('/wallet/ledger', { headers })
+      .then((res) => { if (Array.isArray(res.data)) setLedger(res.data); })
+      .catch(() => undefined);
 
     api<{ data: Voucher[] }>('/vouchers').then((res) => {
       if (Array.isArray(res.data) && res.data.length > 0) setVouchers(res.data);
@@ -1103,6 +1117,64 @@ function Account() {
               <ClipboardList size={30} />
               <b>Chưa có đơn nào</b>
               <span>Tạo đơn đầu tiên để bắt đầu theo dõi.</span>
+            </div>
+          )}
+        </section>
+
+        {/* BIẾN ĐỘNG SỐ DƯ VÍ */}
+        <section className="panel table-panel" style={{ marginTop: '24px' }}>
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow"><History size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> BIẾN ĐỘNG VÍ XU</span>
+              <h2>Lịch sử giao dịch số dư</h2>
+            </div>
+            <span className="muted">{ledger.length} giao dịch gần nhất</span>
+          </div>
+          {ledger.length ? (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Thời gian</th>
+                    <th>Loại giao dịch</th>
+                    <th>Biến động số dư</th>
+                    <th>Ghi chú / Tham chiếu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledger.map((item) => (
+                    <tr key={item.id}>
+                      <td>{new Date(item.createdAt).toLocaleString('vi-VN')}</td>
+                      <td>
+                        <span className="user-type-badge" style={{
+                          background: item.type.includes('CREDIT') ? '#ecfdf5' : '#fef2f2',
+                          color: item.type.includes('CREDIT') ? '#047857' : '#b91c1c',
+                          border: `1px solid ${item.type.includes('CREDIT') ? '#a7f3d0' : '#fecaca'}`
+                        }}>
+                          {item.type === 'ADMIN_CREDIT' ? 'Admin cộng Xu' :
+                           item.type === 'ADMIN_DEBIT' ? 'Admin trừ Xu' :
+                           item.type === 'TOPUP_CREDIT' ? 'Nạp Xu SePay' :
+                           item.type === 'ORDER_DEBIT' ? 'Trừ tiền tạo đơn' : item.type}
+                        </span>
+                      </td>
+                      <td>
+                        <strong style={{ color: item.amount >= 0 ? '#059669' : '#dc2626' }}>
+                          {item.amount >= 0 ? `+${formatVnd(item.amount)}` : `-${formatVnd(Math.abs(item.amount))}`}
+                        </strong>
+                      </td>
+                      <td style={{ color: 'var(--muted)', fontSize: '12px' }}>
+                        {item.referenceId || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty">
+              <WalletCards size={30} />
+              <b>Chưa có biến động số dư</b>
+              <span>Mọi giao dịch nạp tiền, tạo đơn hoặc điều chỉnh từ Admin sẽ hiển thị tại đây.</span>
             </div>
           )}
         </section>
@@ -1598,7 +1670,13 @@ function AdminPanel() {
           <section className="panel table-panel"><AdminOrdersTable orders={orders} onStatus={updateStatus} /></section>
         ) : section === 'users' ? (
           <section className="panel table-panel">
-            <AdminUsersTable users={users} userTypes={userTypes} onUpdateType={updateUserType} />
+            <AdminUsersTable
+              users={users}
+              userTypes={userTypes}
+              headers={headers}
+              onReload={load}
+              onUpdateType={updateUserType}
+            />
           </section>
         ) : section === 'user-types' ? (
           <UserTypeManager userTypes={userTypes} headers={headers} onReload={load} />
@@ -1623,12 +1701,31 @@ function AdminOrdersTable({ orders, onStatus }: { orders: Order[]; onStatus: (id
 function AdminUsersTable({
   users,
   userTypes,
+  headers,
+  onReload,
   onUpdateType
 }: {
   users: AdminUser[];
   userTypes: UserType[];
+  headers?: { Authorization: string };
+  onReload?: () => void | Promise<void>;
   onUpdateType: (userId: string, type: string) => void;
 }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [adjustingUser, setAdjustingUser] = useState<AdminUser | null>(null);
+  const [initialAction, setInitialAction] = useState<'ADD' | 'SUBTRACT'>('ADD');
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 4500);
+  };
+
+  const openAdjust = (user: AdminUser, action: 'ADD' | 'SUBTRACT' = 'ADD') => {
+    setInitialAction(action);
+    setAdjustingUser(user);
+  };
+
   const getBadgeStyle = (code?: string) => {
     switch (code) {
       case 'ADMIN': return { bg: '#ede9fe', color: '#6d28d9', border: '#ddd6fe' };
@@ -1638,77 +1735,488 @@ function AdminUsersTable({
     }
   };
 
+  const filteredUsers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      u.username.toLowerCase().includes(q) ||
+      u.id.toLowerCase().includes(q) ||
+      (u.userTypeName && u.userTypeName.toLowerCase().includes(q)) ||
+      (u.userType && u.userType.toLowerCase().includes(q))
+    );
+  }, [users, searchQuery]);
+
+  const totalSystemBalance = useMemo(() => {
+    return users.reduce((sum, u) => sum + (u.balance || 0), 0);
+  }, [users]);
+
   return (
     <>
       <div className="section-heading">
         <div>
-          <span className="eyebrow">NGƯỜI DÙNG</span>
-          <h2>Tài khoản &amp; Phân loại người dùng</h2>
+          <span className="eyebrow">QUẢN LÝ TÀI KHOẢN</span>
+          <h2>Tài khoản &amp; Số dư người dùng</h2>
         </div>
-        <span className="muted">{users.length} tài khoản</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span className="muted">{users.length} tài khoản</span>
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: '8px',
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              color: '#0369a1',
+              fontSize: '12px',
+              fontWeight: 700
+            }}
+          >
+            Tổng Xu hệ thống: <b>{formatVnd(totalSystemBalance)}</b>
+          </span>
+        </div>
       </div>
+
+      {toast && (
+        <div className={`notice ${toast.type}`} style={{ marginBottom: '14px' }}>
+          {toast.text}
+        </div>
+      )}
+
+      {/* Toolbar: Tìm kiếm */}
+      <div className="admin-table-toolbar">
+        <div className="admin-search-box">
+          <Search size={16} />
+          <input
+            type="text"
+            placeholder="Tìm theo username, ID người dùng..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                background: 'none',
+                border: 'none',
+                color: 'var(--muted)',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+            Tìm thấy <b>{filteredUsers.length}</b> kết quả
+          </span>
+        )}
+      </div>
+
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
               <th>User</th>
               <th>Số dư</th>
+              <th>Điều chỉnh số dư</th>
               <th>Loại hiện tại</th>
               <th>Phân loại nhóm (CTV, VIP, ...)</th>
               <th>Trạng thái</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => {
-              const currentType = user.userType || (user.role === 'ADMIN' ? 'ADMIN' : 'MEMBER');
-              const style = getBadgeStyle(currentType);
-              return (
-                <tr key={user.id}>
-                  <td>
-                    <strong>{user.username}</strong>
-                    {user.id && <small style={{ display: 'block', color: 'var(--muted)', fontSize: '11px' }}>ID: {user.id}</small>}
-                  </td>
-                  <td>{formatVnd(user.balance)}</td>
-                  <td>
-                    <span
-                      className="user-type-badge"
-                      style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}` }}
-                    >
-                      <Shield size={12} />
-                      {user.userTypeName || currentType}
-                      {(user.discountPercent ?? 0) > 0 && ` (-${user.discountPercent}%)`}
-                    </span>
-                  </td>
-                  <td>
-                    <select
-                      className="status-select"
-                      value={currentType}
-                      onChange={(e) => onUpdateType(user.id, e.target.value)}
-                    >
-                      {userTypes.length > 0 ? (
-                        userTypes.map((ut) => (
-                          <option key={ut.code} value={ut.code}>
-                            {ut.name} {ut.discountPercent > 0 ? `(Giảm ${ut.discountPercent}%)` : ''}
-                          </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="MEMBER">Thành viên (0%)</option>
-                          <option value="CTV">Cộng tác viên (10%)</option>
-                          <option value="VIP">Khách VIP (5%)</option>
-                          <option value="ADMIN">Quản trị viên</option>
-                        </>
-                      )}
-                    </select>
-                  </td>
-                  <td><span className="status status-completed">{user.status}</span></td>
-                </tr>
-              );
-            })}
+            {filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: 'var(--muted)' }}>
+                  Không tìm thấy người dùng nào phù hợp với "{searchQuery}"
+                </td>
+              </tr>
+            ) : (
+              filteredUsers.map((user) => {
+                const currentType = user.userType || (user.role === 'ADMIN' ? 'ADMIN' : 'MEMBER');
+                const style = getBadgeStyle(currentType);
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <strong>{user.username}</strong>
+                      {user.id && <small style={{ display: 'block', color: 'var(--muted)', fontSize: '11px' }}>ID: {user.id}</small>}
+                    </td>
+                    <td>
+                      <strong style={{ color: 'var(--blue-strong)', fontSize: '15px' }}>
+                        {formatVnd(user.balance)}
+                      </strong>
+                    </td>
+                    <td>
+                      <div className="quick-adjust-group">
+                        <button
+                          type="button"
+                          className="quick-adjust-btn btn-add"
+                          onClick={() => openAdjust(user, 'ADD')}
+                          title={`Cộng Xu cho ${user.username}`}
+                        >
+                          <Plus size={13} /> Cộng Xu
+                        </button>
+                        <button
+                          type="button"
+                          className="quick-adjust-btn btn-sub"
+                          onClick={() => openAdjust(user, 'SUBTRACT')}
+                          title={`Trừ Xu của ${user.username}`}
+                        >
+                          <Minus size={13} /> Trừ Xu
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        className="user-type-badge"
+                        style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}` }}
+                      >
+                        <Shield size={12} />
+                        {user.userTypeName || currentType}
+                        {(user.discountPercent ?? 0) > 0 && ` (-${user.discountPercent}%)`}
+                      </span>
+                    </td>
+                    <td>
+                      <select
+                        className="status-select"
+                        value={currentType}
+                        onChange={(e) => onUpdateType(user.id, e.target.value)}
+                      >
+                        {userTypes.length > 0 ? (
+                          userTypes.map((ut) => (
+                            <option key={ut.code} value={ut.code}>
+                              {ut.name} {ut.discountPercent > 0 ? `(Giảm ${ut.discountPercent}%)` : ''}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="MEMBER">Thành viên (0%)</option>
+                            <option value="CTV">Cộng tác viên (10%)</option>
+                            <option value="VIP">Khách VIP (5%)</option>
+                            <option value="ADMIN">Quản trị viên</option>
+                          </>
+                        )}
+                      </select>
+                    </td>
+                    <td><span className="status status-completed">{user.status}</span></td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
+
+      {adjustingUser && (
+        <AdjustBalanceModal
+          user={adjustingUser}
+          initialAction={initialAction}
+          headers={headers}
+          onClose={() => setAdjustingUser(null)}
+          onSuccess={(updated, msg) => {
+            setAdjustingUser(null);
+            showToast(msg || `Đã cập nhật số dư cho ${updated.username}!`, 'success');
+            if (onReload) void onReload();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function AdjustBalanceModal({
+  user,
+  initialAction = 'ADD',
+  headers,
+  onClose,
+  onSuccess
+}: {
+  user: AdminUser;
+  initialAction?: 'ADD' | 'SUBTRACT';
+  headers?: { Authorization: string };
+  onClose: () => void;
+  onSuccess: (updated: AdminUser, message: string) => void;
+}) {
+  const [action, setAction] = useState<'ADD' | 'SUBTRACT'>(initialAction);
+  const [amountStr, setAmountStr] = useState('50000');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [showLedger, setShowLedger] = useState(false);
+  const [ledger, setLedger] = useState<WalletLedgerItem[]>([]);
+  const [loadingLedger, setLoadingLedger] = useState(false);
+
+  // Parse amount number
+  const cleanAmount = Number(amountStr.replace(/\D/g, '')) || 0;
+  const currentBalance = user.balance || 0;
+  const delta = action === 'ADD' ? cleanAmount : -cleanAmount;
+  const newBalance = currentBalance + delta;
+  const isNegative = action === 'SUBTRACT' && cleanAmount > currentBalance;
+
+  // Lấy lịch sử biến động số dư khi mở xem
+  const fetchLedger = async () => {
+    if (ledger.length > 0) return;
+    setLoadingLedger(true);
+    try {
+      const res = await api<{ data: WalletLedgerItem[] }>(`/admin/users/${user.id}/ledger`, { headers });
+      if (Array.isArray(res.data)) setLedger(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingLedger(false);
+    }
+  };
+
+  const handleToggleLedger = () => {
+    const next = !showLedger;
+    setShowLedger(next);
+    if (next) void fetchLedger();
+  };
+
+  const presetAmounts = [10000, 20000, 50000, 100000, 200000, 500000, 1000000];
+
+  const quickReasons = action === 'ADD'
+    ? ['Nạp bù thẻ cào qua Zalo', 'Admin thưởng sự kiện', 'Hoàn tiền đơn hàng lỗi', 'Cộng tiền ưu đãi']
+    : ['Khấu trừ giao dịch thừa', 'Thu hồi đơn hàng bị hủy', 'Trừ phí dịch vụ', 'Khấu trừ theo yêu cầu'];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cleanAmount <= 0) {
+      setError('Vui lòng nhập số Xu lớn hơn 0');
+      return;
+    }
+    if (isNegative) {
+      setError(`Số dư hiện tại không đủ để trừ. (Tối đa trừ: ${formatVnd(currentBalance)})`);
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await api<{ data: AdminUser; message: string }>(`/admin/users/${user.id}/balance`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action,
+          amount: cleanAmount,
+          reason: reason.trim() || undefined
+        })
+      });
+      onSuccess(res.data, res.message || `Đã ${action === 'ADD' ? 'cộng' : 'trừ'} ${formatVnd(cleanAmount)} thành công!`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể điều chỉnh số dư');
+      setSubmitting(false);
+    }
+  };
+
+  const formatLedgerType = (type: string) => {
+    switch (type) {
+      case 'ADMIN_CREDIT': return 'Admin cộng Xu';
+      case 'ADMIN_DEBIT': return 'Admin trừ Xu';
+      case 'TOPUP_CREDIT': return 'Nạp Xu SePay';
+      case 'ORDER_DEBIT': return 'Trừ tiền tạo đơn';
+      default: return type;
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        <header className="modal-header">
+          <h3>
+            <CircleDollarSign size={20} className="accent-icon" />
+            Điều chỉnh số dư người dùng
+          </h3>
+          <button type="button" className="modal-close-btn" onClick={onClose} title="Đóng">
+            <X size={18} />
+          </button>
+        </header>
+
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            {error && <div className="notice error">{error}</div>}
+
+            {/* Thẻ người dùng */}
+            <div className="modal-user-card">
+              <div className="modal-user-info">
+                <div className="modal-user-avatar">
+                  {user.username.slice(0, 1).toUpperCase()}
+                </div>
+                <div className="modal-user-meta">
+                  <strong>{user.username}</strong>
+                  <span>ID: {user.id}</span>
+                </div>
+              </div>
+              <div className="modal-balance-display">
+                <span>Số dư hiện tại</span>
+                <strong>{formatVnd(user.balance)}</strong>
+              </div>
+            </div>
+
+            {/* Chế độ: Cộng (+) hoặc Trừ (-) */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 800 }}>
+                Hành động điều chỉnh
+              </label>
+              <div className="action-mode-toggle">
+                <button
+                  type="button"
+                  className={`action-toggle-btn ${action === 'ADD' ? 'active-add' : ''}`}
+                  onClick={() => { setAction('ADD'); setError(''); }}
+                >
+                  <Plus size={16} /> Cộng số dư (+)
+                </button>
+                <button
+                  type="button"
+                  className={`action-toggle-btn ${action === 'SUBTRACT' ? 'active-sub' : ''}`}
+                  onClick={() => { setAction('SUBTRACT'); setError(''); }}
+                >
+                  <Minus size={16} /> Trừ số dư (-)
+                </button>
+              </div>
+            </div>
+
+            {/* Nhập số Xu */}
+            <div className="preset-chips-wrap">
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 800 }}>
+                Số Xu cần {action === 'ADD' ? 'cộng thêm' : 'khấu trừ'}
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={cleanAmount ? cleanAmount.toLocaleString('vi-VN') : ''}
+                placeholder="Nhập số Xu..."
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  setAmountStr(raw);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: '1px solid var(--line)',
+                  borderRadius: '12px',
+                  fontSize: '17px',
+                  fontWeight: 800,
+                  color: action === 'ADD' ? '#059669' : '#dc2626'
+                }}
+              />
+              <div className="preset-chips">
+                {presetAmounts.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`preset-chip ${cleanAmount === preset ? 'active' : ''}`}
+                    onClick={() => setAmountStr(String(preset))}
+                  >
+                    {action === 'ADD' ? '+' : '-'}{new Intl.NumberFormat('vi-VN').format(preset)} Xu
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ghi chú lý do */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 800 }}>
+                Lý do / Ghi chú điều chỉnh
+              </label>
+              <input
+                type="text"
+                placeholder={action === 'ADD' ? 'Ví dụ: Nạp bù thẻ cào qua Zalo, thưởng sự kiện...' : 'Ví dụ: Khấu trừ đơn lỗi, hoàn tác giao dịch...'}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                maxLength={255}
+                style={{ width: '100%', padding: '11px 14px', border: '1px solid var(--line)', borderRadius: '12px' }}
+              />
+              <div className="preset-chips" style={{ marginTop: '8px' }}>
+                {quickReasons.map((qr) => (
+                  <button
+                    key={qr}
+                    type="button"
+                    className="preset-chip"
+                    onClick={() => setReason(qr)}
+                  >
+                    {qr}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dự tính sau khi thay đổi */}
+            <div className="balance-calc-box">
+              <div className="balance-calc-row">
+                <span className="muted">Số dư trước điều chỉnh:</span>
+                <b>{formatVnd(currentBalance)}</b>
+              </div>
+              <div className="balance-calc-row">
+                <span className="muted">Số Xu {action === 'ADD' ? 'cộng vào' : 'trừ đi'}:</span>
+                <b className={action === 'ADD' ? 'balance-delta-add' : 'balance-delta-sub'}>
+                  {action === 'ADD' ? '+' : '-'}{formatVnd(cleanAmount)}
+                </b>
+              </div>
+              <div className="balance-calc-row final">
+                <span>Số dư mới dự kiến:</span>
+                <strong style={{ fontSize: '16px', color: isNegative ? '#dc2626' : 'var(--blue-strong)' }}>
+                  {formatVnd(Math.max(0, newBalance))}
+                </strong>
+              </div>
+              {isNegative && (
+                <div style={{ color: '#dc2626', fontSize: '12px', fontWeight: 700, marginTop: '4px' }}>
+                  ⚠️ Cảnh báo: Số dư tài khoản không đủ để trừ số Xu này!
+                </div>
+              )}
+            </div>
+
+            {/* Lịch sử ví gần đây */}
+            <div className="ledger-history-box">
+              <div className="ledger-history-head" onClick={handleToggleLedger}>
+                <span><History size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Lịch sử biến động ví gần đây</span>
+                <span style={{ color: 'var(--blue-strong)', fontSize: '11px' }}>
+                  {showLedger ? 'Thu gọn ▲' : 'Xem chi tiết ▼'}
+                </span>
+              </div>
+              {showLedger && (
+                <div className="ledger-history-list">
+                  {loadingLedger ? (
+                    <div style={{ padding: '12px', textAlign: 'center', color: 'var(--muted)' }}>Đang tải lịch sử...</div>
+                  ) : ledger.length === 0 ? (
+                    <div style={{ padding: '12px', textAlign: 'center', color: 'var(--muted)' }}>Chưa có biến động số dư nào</div>
+                  ) : (
+                    ledger.slice(0, 10).map((item) => (
+                      <div className="ledger-item-row" key={item.id}>
+                        <div className="ledger-item-meta">
+                          <b>{formatLedgerType(item.type)}</b>
+                          <span>{new Date(item.createdAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <span className={`ledger-item-amount ${item.amount >= 0 ? 'positive' : 'negative'}`}>
+                          {item.amount >= 0 ? `+${formatVnd(item.amount)}` : `-${formatVnd(Math.abs(item.amount))}`}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <footer className="modal-footer">
+            <button type="button" className="button button-secondary small" onClick={onClose} disabled={submitting}>
+              Đóng
+            </button>
+            <button
+              type="submit"
+              className="button button-primary small"
+              style={action === 'SUBTRACT' ? { background: '#dc2626', borderColor: '#b91c1c' } : { background: '#059669', borderColor: '#047857' }}
+              disabled={submitting || cleanAmount <= 0 || isNegative}
+            >
+              {submitting ? 'Đang thực hiện...' : action === 'ADD' ? `Cộng +${formatVnd(cleanAmount)}` : `Trừ -${formatVnd(cleanAmount)}`}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
   );
 }
 function AdminTopupsTable({ topups }: { topups: Array<{ id: string; userId: string; amount: number; status: string; transferContent: string }> }) { return <><div className="section-heading"><div><span className="eyebrow">NẠP TIỀN</span><h2>Giao dịch nạp</h2></div></div><div className="table-scroll"><table><thead><tr><th>Mã</th><th>User</th><th>Số tiền</th><th>Nội dung</th><th>Trạng thái</th></tr></thead><tbody>{topups.map((topup) => <tr key={topup.id}><td>{topup.id}</td><td>{topup.userId}</td><td>{formatVnd(topup.amount)}</td><td>{topup.transferContent}</td><td><span className={`status status-${topup.status.toLowerCase()}`}>{topup.status}</span></td></tr>)}</tbody></table></div></>; }
