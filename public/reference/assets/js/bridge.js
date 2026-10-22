@@ -132,7 +132,9 @@
         return;
       }
       const json = await response.json();
-      const list = Array.isArray(json.data) ? json.data : [];
+      const list = (Array.isArray(json.data) ? json.data : []).filter(
+        (item) => item.userId !== 'demo-user' && !item.username.toLowerCase().includes('demo')
+      );
       if (!list.length) {
         container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px 0;">Chưa có lượt nạp nào. Hãy nạp tiền để vinh danh Top 1!</div>';
         return;

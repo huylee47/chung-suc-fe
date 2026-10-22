@@ -132,7 +132,10 @@ function Home() {
   useEffect(() => {
     api<{ data: Product[] }>('/products').then((result) => setProducts(result.data)).catch(() => undefined);
     api<{ data: LeaderboardEntry[] }>('/leaderboard').then((result) => {
-      if (Array.isArray(result.data)) setLeaderboard(result.data.slice(0, 3));
+      if (Array.isArray(result.data)) {
+        const clean = result.data.filter((item) => item.userId !== 'demo-user' && !item.username.toLowerCase().includes('demo'));
+        setLeaderboard(clean.slice(0, 3));
+      }
     }).catch(() => undefined);
   }, []);
   return (
@@ -553,7 +556,10 @@ function TopupPage() {
   useEffect(() => {
     api<{ data: LeaderboardEntry[] }>('/leaderboard')
       .then((res) => {
-        if (Array.isArray(res.data)) setTopRankers(res.data.slice(0, 3));
+        if (Array.isArray(res.data)) {
+          const clean = res.data.filter((item) => item.userId !== 'demo-user' && !item.username.toLowerCase().includes('demo'));
+          setTopRankers(clean.slice(0, 3));
+        }
       })
       .catch(() => undefined);
   }, []);
@@ -1040,7 +1046,8 @@ function LeaderboardPage() {
     api<{ data: LeaderboardEntry[] }>('/leaderboard')
       .then((res) => {
         if (Array.isArray(res.data)) {
-          setData(res.data);
+          const clean = res.data.filter((item) => item.userId !== 'demo-user' && !item.username.toLowerCase().includes('demo'));
+          setData(clean);
         }
       })
       .catch(() => undefined)
