@@ -3,8 +3,8 @@ import { Link, NavLink, Route, Routes, useNavigate, useSearchParams } from 'reac
 import {
   ArrowLeft, ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList,
   Copy, Crown, Eye, EyeOff, Flame, Gift, Headphones, LayoutDashboard, LogIn,
-  Medal, Pencil, Phone, Plus, ShieldCheck, Sparkles, Tag, Ticket, Trash2,
-  Trophy, UserRound, WalletCards, X
+  Medal, Pencil, Percent, Phone, Plus, Shield, ShieldCheck, Sparkles, Tag, Ticket, Trash2,
+  Trophy, UserCheck, UserRound, Users, WalletCards, X
 } from 'lucide-react';
 import { api } from './api';
 
@@ -43,6 +43,27 @@ export type LeaderboardEntry = {
   username: string;
   totalDeposited: number;
   topupCount?: number;
+};
+export type UserType = {
+  id: string;
+  code: string;
+  name: string;
+  discountPercent: number;
+  description?: string;
+  color?: string;
+  userCount?: number;
+  createdAt?: string;
+};
+export type AdminUser = {
+  id: string;
+  username: string;
+  role: string;
+  userType?: string;
+  userTypeName?: string;
+  discountPercent?: number;
+  balance: number;
+  status: string;
+  createdAt?: string;
 };
 
 const phone = '0995438093';
@@ -238,6 +259,9 @@ function OrderPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // User tier states
+  const [userProfile, setUserProfile] = useState<{ userType?: string; userTypeName?: string; discountPercent?: number } | null>(null);
+
   // Voucher states
   const [vouchers, setVouchers] = useState<Voucher[]>(() => getLocalVouchers().filter((v) => v.active));
   const [voucherInput, setVoucherInput] = useState(queryVoucher.toUpperCase());
@@ -245,6 +269,15 @@ function OrderPage() {
   const [voucherNotice, setVoucherNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      api<{ data: { userType?: string; userTypeName?: string; discountPercent?: number } }>('/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then((res) => {
+        if (res?.data) setUserProfile(res.data);
+      }).catch(() => undefined);
+    }
+
     setLoadingProducts(true);
     api<{ data: Product[] }>('/products').then((result) => {
       setProducts(result.data);
@@ -265,7 +298,12 @@ function OrderPage() {
   const selected = products.find((product) => product.id === productId) ?? products[0];
   const subtotal = (selected?.price ?? 0) * quantity;
 
-  // Tính discount
+  // Chiết khấu theo loại người dùng (CTV, VIP...)
+  const userDiscountPercent = userProfile?.discountPercent ?? 0;
+  const tierDiscountAmount = userDiscountPercent > 0 ? Math.round((subtotal * userDiscountPercent) / 100) : 0;
+  const amountAfterTier = Math.max(0, subtotal - tierDiscountAmount);
+
+  // Tính discount voucher
   const discountAmount = useMemo(() => {
     if (!appliedVoucher) return 0;
     if (subtotal < appliedVoucher.minOrderValue) return 0;
@@ -278,10 +316,10 @@ function OrderPage() {
     } else {
       disc = appliedVoucher.discountValue;
     }
-    return Math.min(disc, subtotal);
-  }, [appliedVoucher, subtotal]);
+    return Math.min(disc, amountAfterTier);
+  }, [appliedVoucher, subtotal, amountAfterTier]);
 
-  const finalTotal = Math.max(0, subtotal - discountAmount);
+  const finalTotal = Math.max(0, subtotal - tierDiscountAmount - discountAmount);
 
   // Tự động kiểm tra query voucher nếu có
   useEffect(() => {
@@ -353,9 +391,13 @@ function OrderPage() {
           voucherCode: appliedVoucher ? appliedVoucher.code : undefined
         })
       });
+      const savedNotice: string[] = [];
+      if (tierDiscountAmount > 0) savedNotice.push(`tiết kiệm ${formatVnd(tierDiscountAmount)} (Ưu đãi ${userProfile?.userTypeName || 'CTV'})`);
+      if (discountAmount > 0) savedNotice.push(`tiết kiệm ${formatVnd(discountAmount)} (Voucher ${appliedVoucher?.code})`);
+
       setMessage(
-        appliedVoucher
-          ? `Đã gửi đơn thành công! Tiết kiệm ${formatVnd(discountAmount)} với voucher ${appliedVoucher.code}. Admin đã nhận UID của bạn.`
+        savedNotice.length > 0
+          ? `Đã gửi đơn thành công! (${savedNotice.join(', ')}). Admin đã nhận UID của bạn.`
           : 'Đã gửi đơn thành công. Admin đã nhận được UID user của bạn.'
       );
       setUid('');
@@ -381,6 +423,18 @@ function OrderPage() {
         </div>
         <div className="form-layout">
           <form className="panel form" onSubmit={submit}>
+            {userDiscountPercent > 0 && (
+              <div className="tier-discount-banner">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Shield size={18} style={{ color: '#16a34a' }} />
+                  <span>Ưu đãi <b>{userProfile?.userTypeName || 'Cộng tác viên'}</b>: Tự động giảm {userDiscountPercent}% cho mọi đơn dịch vụ</span>
+                </div>
+                <span className="user-type-badge" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
+                  -{userDiscountPercent}%
+                </span>
+              </div>
+            )}
+
             <label>
               Sản phẩm
               <select value={productId} onChange={(event) => setProductId(event.target.value)}>
@@ -524,9 +578,16 @@ function OrderPage() {
               <b>{formatVnd(subtotal)}</b>
             </div>
 
+            {tierDiscountAmount > 0 && (
+              <div className="summary-line discount">
+                <span>Ưu đãi {userProfile?.userTypeName || 'CTV'} (-{userDiscountPercent}%)</span>
+                <b>-{formatVnd(tierDiscountAmount)}</b>
+              </div>
+            )}
+
             {appliedVoucher && discountAmount > 0 && (
               <div className="summary-line discount">
-                <span>Giảm giá ({appliedVoucher.code})</span>
+                <span>Mã giảm ({appliedVoucher.code})</span>
                 <b>-{formatVnd(discountAmount)}</b>
               </div>
             )}
@@ -868,6 +929,7 @@ function Register() {
 function Account() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [balance, setBalance] = useState(0);
+  const [userProfile, setUserProfile] = useState<{ userType?: string; userTypeName?: string; discountPercent?: number } | null>(null);
   const [vouchers, setVouchers] = useState<Voucher[]>(() => getLocalVouchers().filter((v) => v.active));
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -876,10 +938,12 @@ function Account() {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     Promise.all([
       api<{ data: Order[] }>('/orders', { headers }),
-      api<{ data: { balance: number } }>('/wallet/balance', { headers })
-    ]).then(([orderResult, balanceResult]) => {
+      api<{ data: { balance: number } }>('/wallet/balance', { headers }),
+      api<{ data: { userType?: string; userTypeName?: string; discountPercent?: number } }>('/me', { headers })
+    ]).then(([orderResult, balanceResult, meResult]) => {
       setOrders(orderResult.data);
       setBalance(balanceResult.data.balance);
+      if (meResult?.data) setUserProfile(meResult.data);
     }).catch(() => undefined);
 
     api<{ data: Voucher[] }>('/vouchers').then((res) => {
@@ -914,6 +978,17 @@ function Account() {
             <span>Số dư khả dụng</span>
             <strong>{formatVnd(balance)}</strong>
             <Link to="/topup">Nạp thêm <ArrowRight size={15} /></Link>
+          </div>
+          <div className="metric-card" style={{ borderLeft: '3px solid #0284c7' }}>
+            <span>Hạng tài khoản</span>
+            <strong style={{ fontSize: '18px', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Shield size={17} /> {userProfile?.userTypeName || 'Thành viên'}
+            </strong>
+            <small>
+              {(userProfile?.discountPercent ?? 0) > 0
+                ? `Ưu đãi giảm ${userProfile?.discountPercent}% mọi dịch vụ`
+                : 'Thành viên thông thường'}
+            </small>
           </div>
           <div className="metric-card">
             <span>Tổng đơn</span>
@@ -1375,7 +1450,8 @@ function LoginGate() {
 function AdminPanel() {
   const [section, setSection] = useState('dashboard');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [users, setUsers] = useState<Array<{ id: string; username: string; balance: number; status: string }>>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userTypes, setUserTypes] = useState<UserType[]>([]);
   const [topups, setTopups] = useState<Array<{ id: string; userId: string; amount: number; status: string; transferContent: string }>>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [adminVouchers, setAdminVouchers] = useState<Voucher[]>(() => getLocalVouchers());
@@ -1392,11 +1468,17 @@ function AdminPanel() {
       const [dashboard, orderResult, userResult, topupResult, productResult] = await Promise.all([
         api<{ data: typeof stats }>('/admin/dashboard', { headers }),
         api<{ data: Order[] }>('/admin/orders', { headers }),
-        api<{ data: typeof users }>('/admin/users', { headers }),
+        api<{ data: AdminUser[] }>('/admin/users', { headers }),
         api<{ data: typeof topups }>('/admin/topups', { headers }),
         api<{ data: Product[] }>('/products')
       ]);
       setStats(dashboard.data); setOrders(orderResult.data); setUsers(userResult.data); setTopups(topupResult.data); setProducts(productResult.data);
+
+      try {
+        const utResult = await api<{ data: UserType[] }>('/admin/user-types', { headers });
+        if (Array.isArray(utResult.data)) setUserTypes(utResult.data);
+      } catch {}
+
       try {
         const vResult = await api<{ data: Voucher[] }>('/admin/vouchers', { headers });
         if (Array.isArray(vResult.data)) {
@@ -1411,14 +1493,24 @@ function AdminPanel() {
   };
   useEffect(() => { void load(); }, []);
   const updateStatus = async (id: string, status: string) => { try { await api(`/admin/orders/${id}/status`, { method: 'PATCH', headers, body: JSON.stringify({ status }) }); await load(); } catch (updateError) { setError(updateError instanceof Error ? updateError.message : 'Không thể cập nhật đơn'); } };
+  const updateUserType = async (userId: string, newType: string) => {
+    try {
+      await api(`/admin/users/${userId}/type`, { method: 'PATCH', headers, body: JSON.stringify({ userType: newType }) });
+      await load();
+    } catch (updateTypeError) {
+      setError(updateTypeError instanceof Error ? updateTypeError.message : 'Không thể phân loại người dùng');
+    }
+  };
+
   if (!token) return <main className="admin-gate"><div className="panel"><ShieldCheck size={35} className="accent-icon" /><h1>Cần đăng nhập admin</h1><p>Đăng nhập bằng tài khoản quản trị để truy cập khu vực này.</p><Link className="button button-primary" to="/login">Đăng nhập admin <LogIn size={17} /></Link></div></main>;
   const nav = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} /> },
-    { id: 'orders',    label: 'Đơn hàng',  icon: <ClipboardList size={17} /> },
-    { id: 'users',     label: 'Người dùng',icon: <UserRound size={17} /> },
-    { id: 'topups',    label: 'Nạp tiền',  icon: <WalletCards size={17} /> },
-    { id: 'products',  label: 'Sản phẩm',  icon: <CircleDollarSign size={17} /> },
-    { id: 'vouchers',  label: 'Vouchers',  icon: <Ticket size={17} /> },
+    { id: 'dashboard',  label: 'Dashboard',       icon: <LayoutDashboard size={17} /> },
+    { id: 'orders',     label: 'Đơn hàng',        icon: <ClipboardList size={17} /> },
+    { id: 'users',      label: 'Người dùng',      icon: <UserRound size={17} /> },
+    { id: 'user-types', label: 'Loại người dùng', icon: <UserCheck size={17} /> },
+    { id: 'topups',     label: 'Nạp tiền',        icon: <WalletCards size={17} /> },
+    { id: 'products',   label: 'Sản phẩm',        icon: <CircleDollarSign size={17} /> },
+    { id: 'vouchers',   label: 'Vouchers',        icon: <Ticket size={17} /> },
   ];
   const kpiColors = ['kpi-card-blue', 'kpi-card-violet', 'kpi-card-teal', 'kpi-card-amber'];
   const kpiData = [
@@ -1505,7 +1597,11 @@ function AdminPanel() {
         ) : section === 'orders' ? (
           <section className="panel table-panel"><AdminOrdersTable orders={orders} onStatus={updateStatus} /></section>
         ) : section === 'users' ? (
-          <section className="panel table-panel"><AdminUsersTable users={users} /></section>
+          <section className="panel table-panel">
+            <AdminUsersTable users={users} userTypes={userTypes} onUpdateType={updateUserType} />
+          </section>
+        ) : section === 'user-types' ? (
+          <UserTypeManager userTypes={userTypes} headers={headers} onReload={load} />
         ) : section === 'topups' ? (
           <section className="panel table-panel"><AdminTopupsTable topups={topups} /></section>
         ) : section === 'vouchers' ? (
@@ -1524,8 +1620,375 @@ function AdminPanel() {
 }
 
 function AdminOrdersTable({ orders, onStatus }: { orders: Order[]; onStatus: (id: string, status: string) => void }) { return <><div className="section-heading"><div><span className="eyebrow">ĐƠN HÀNG</span><h2>Danh sách đơn</h2></div><span className="muted">{orders.length} đơn</span></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>Mã</th><th>User</th><th>UID</th><th>Dịch vụ</th><th>Trạng thái</th><th>Tổng</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.username}</td><td>{order.uid}</td><td>{order.productName}</td><td><select className="status-select" value={order.status} onChange={(event) => onStatus(order.id, event.target.value)}><option>PENDING</option><option>PROCESSING</option><option>COMPLETED</option><option>CANCELLED</option><option>FAILED</option></select></td><td>{formatVnd(order.total)}</td></tr>)}</tbody></table></div> : <div className="empty"><ClipboardList size={30} /><b>Chưa có đơn</b></div>}</>; }
-function AdminUsersTable({ users }: { users: Array<{ id: string; username: string; balance: number; status: string }> }) { return <><div className="section-heading"><div><span className="eyebrow">NGƯỜI DÙNG</span><h2>Tài khoản user</h2></div></div><div className="table-scroll"><table><thead><tr><th>User</th><th>Số dư</th><th>Trạng thái</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.username}</td><td>{formatVnd(user.balance)}</td><td><span className="status status-completed">{user.status}</span></td></tr>)}</tbody></table></div></>; }
+function AdminUsersTable({
+  users,
+  userTypes,
+  onUpdateType
+}: {
+  users: AdminUser[];
+  userTypes: UserType[];
+  onUpdateType: (userId: string, type: string) => void;
+}) {
+  const getBadgeStyle = (code?: string) => {
+    switch (code) {
+      case 'ADMIN': return { bg: '#ede9fe', color: '#6d28d9', border: '#ddd6fe' };
+      case 'CTV': return { bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' };
+      case 'VIP': return { bg: '#fef3c7', color: '#92400e', border: '#fde68a' };
+      default: return { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
+    }
+  };
+
+  return (
+    <>
+      <div className="section-heading">
+        <div>
+          <span className="eyebrow">NGƯỜI DÙNG</span>
+          <h2>Tài khoản &amp; Phân loại người dùng</h2>
+        </div>
+        <span className="muted">{users.length} tài khoản</span>
+      </div>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Số dư</th>
+              <th>Loại hiện tại</th>
+              <th>Phân loại nhóm (CTV, VIP, ...)</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => {
+              const currentType = user.userType || (user.role === 'ADMIN' ? 'ADMIN' : 'MEMBER');
+              const style = getBadgeStyle(currentType);
+              return (
+                <tr key={user.id}>
+                  <td>
+                    <strong>{user.username}</strong>
+                    {user.id && <small style={{ display: 'block', color: 'var(--muted)', fontSize: '11px' }}>ID: {user.id}</small>}
+                  </td>
+                  <td>{formatVnd(user.balance)}</td>
+                  <td>
+                    <span
+                      className="user-type-badge"
+                      style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}` }}
+                    >
+                      <Shield size={12} />
+                      {user.userTypeName || currentType}
+                      {(user.discountPercent ?? 0) > 0 && ` (-${user.discountPercent}%)`}
+                    </span>
+                  </td>
+                  <td>
+                    <select
+                      className="status-select"
+                      value={currentType}
+                      onChange={(e) => onUpdateType(user.id, e.target.value)}
+                    >
+                      {userTypes.length > 0 ? (
+                        userTypes.map((ut) => (
+                          <option key={ut.code} value={ut.code}>
+                            {ut.name} {ut.discountPercent > 0 ? `(Giảm ${ut.discountPercent}%)` : ''}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="MEMBER">Thành viên (0%)</option>
+                          <option value="CTV">Cộng tác viên (10%)</option>
+                          <option value="VIP">Khách VIP (5%)</option>
+                          <option value="ADMIN">Quản trị viên</option>
+                        </>
+                      )}
+                    </select>
+                  </td>
+                  <td><span className="status status-completed">{user.status}</span></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
 function AdminTopupsTable({ topups }: { topups: Array<{ id: string; userId: string; amount: number; status: string; transferContent: string }> }) { return <><div className="section-heading"><div><span className="eyebrow">NẠP TIỀN</span><h2>Giao dịch nạp</h2></div></div><div className="table-scroll"><table><thead><tr><th>Mã</th><th>User</th><th>Số tiền</th><th>Nội dung</th><th>Trạng thái</th></tr></thead><tbody>{topups.map((topup) => <tr key={topup.id}><td>{topup.id}</td><td>{topup.userId}</td><td>{formatVnd(topup.amount)}</td><td>{topup.transferContent}</td><td><span className={`status status-${topup.status.toLowerCase()}`}>{topup.status}</span></td></tr>)}</tbody></table></div></>; }
+
+type UserTypeDraft = {
+  id?: string;
+  code: string;
+  name: string;
+  discountPercent: string;
+  description: string;
+  color: string;
+};
+
+const emptyUserTypeDraft: UserTypeDraft = {
+  code: '',
+  name: '',
+  discountPercent: '0',
+  description: '',
+  color: '#0284c7'
+};
+
+function UserTypeManager({
+  userTypes,
+  headers,
+  onReload
+}: {
+  userTypes: UserType[];
+  headers?: { Authorization: string };
+  onReload: () => Promise<void> | void;
+}) {
+  const [draft, setDraft] = useState<UserTypeDraft>(emptyUserTypeDraft);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const editing = editingId !== null;
+
+  const change = (field: keyof UserTypeDraft, value: string) => {
+    setDraft((cur) => ({ ...cur, [field]: value }));
+  };
+
+  const reset = () => {
+    setDraft(emptyUserTypeDraft);
+    setEditingId(null);
+    setMessage('');
+  };
+
+  const startEdit = (ut: UserType) => {
+    setEditingId(ut.id);
+    setDraft({
+      id: ut.id,
+      code: ut.code,
+      name: ut.name,
+      discountPercent: String(ut.discountPercent),
+      description: ut.description || '',
+      color: ut.color || '#0284c7'
+    });
+    setMessage('');
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setMessage('');
+    const payload = {
+      code: draft.code.trim().toUpperCase(),
+      name: draft.name.trim(),
+      discountPercent: Number(draft.discountPercent || 0),
+      description: draft.description.trim() || undefined,
+      color: draft.color || '#0284c7'
+    };
+
+    try {
+      if (editing) {
+        await api(`/admin/user-types/${editingId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      } else {
+        await api('/admin/user-types', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      }
+      reset();
+      await onReload();
+      setMessage(editing ? 'Đã cập nhật loại người dùng!' : 'Đã thêm loại người dùng mới!');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Không thể lưu loại người dùng');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (ut: UserType) => {
+    if (ut.code === 'MEMBER' || ut.code === 'ADMIN') {
+      alert('Không thể xóa nhóm người dùng mặc định (MEMBER, ADMIN)');
+      return;
+    }
+    if (!window.confirm(`Xoá nhóm “${ut.name}”? Các user trong nhóm này sẽ được chuyển về nhóm Thành viên.`)) return;
+    try {
+      await api(`/admin/user-types/${ut.id}`, { method: 'DELETE', headers });
+      if (editingId === ut.id) reset();
+      await onReload();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Không thể xóa loại người dùng');
+    }
+  };
+
+  const discountedTypes = userTypes.filter((ut) => ut.discountPercent > 0).length;
+  const totalUsersInTypes = userTypes.reduce((acc, cur) => acc + (cur.userCount || 0), 0);
+
+  return (
+    <div>
+      <div className="admin-kpis" style={{ marginBottom: '20px' }}>
+        <div className="kpi-card kpi-card-blue">
+          <div className="kpi-icon"><Users size={18} /></div>
+          <span className="kpi-label">Tổng loại người dùng</span>
+          <strong className="kpi-value">{userTypes.length}</strong>
+          <span className="kpi-delta">Phân cấp hệ thống</span>
+        </div>
+        <div className="kpi-card kpi-card-teal">
+          <div className="kpi-icon"><Percent size={18} /></div>
+          <span className="kpi-label">Nhóm có chiết khấu</span>
+          <strong className="kpi-value">{discountedTypes}</strong>
+          <span className="kpi-delta">Ưu đãi giảm giá %</span>
+        </div>
+        <div className="kpi-card kpi-card-violet">
+          <div className="kpi-icon"><UserCheck size={18} /></div>
+          <span className="kpi-label">Tổng thành viên</span>
+          <strong className="kpi-value">{totalUsersInTypes}</strong>
+          <span className="kpi-delta">Đã phân loại</span>
+        </div>
+      </div>
+
+      <div className="user-type-admin-layout">
+        <section>
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">PHÂN CẤP</span>
+              <h2>Danh sách Loại Người Dùng</h2>
+            </div>
+            <span className="muted">{userTypes.length} nhóm</span>
+          </div>
+
+          {message && (
+            <div className={`notice ${message.includes('Đã') ? 'success' : 'error'}`} style={{ marginBottom: '14px' }}>
+              {message}
+            </div>
+          )}
+
+          <div className="admin-list">
+            {userTypes.map((ut) => (
+              <article className="admin-list-row" key={ut.id}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span
+                      className="user-type-badge"
+                      style={{ background: '#f1f5f9', color: ut.color || '#0284c7', border: `1px solid ${ut.color || '#cbd5e1'}` }}
+                    >
+                      <Shield size={12} /> {ut.code}
+                    </span>
+                    <strong style={{ fontSize: '15px', color: 'var(--ink)' }}>{ut.name}</strong>
+                  </div>
+                  <p style={{ margin: '4px 0', fontSize: '13px', color: 'var(--muted)' }}>
+                    {ut.description || 'Chưa có mô tả'}
+                  </p>
+                  <small style={{ color: 'var(--muted)', fontSize: '11px', display: 'flex', gap: '10px' }}>
+                    <span>Số thành viên: <b>{ut.userCount ?? 0}</b></span>
+                  </small>
+                </div>
+                <div className="admin-list-meta">
+                  <strong style={{ color: ut.discountPercent > 0 ? '#16a34a' : 'var(--muted)', fontSize: '18px' }}>
+                    {ut.discountPercent > 0 ? `-${ut.discountPercent}%` : '0%'}
+                  </strong>
+                  <small>Chiết khấu đơn</small>
+                </div>
+                <div className="admin-list-actions">
+                  <button
+                    className="icon-button"
+                    type="button"
+                    title="Chỉnh sửa loại người dùng"
+                    aria-label={`Sửa ${ut.name}`}
+                    onClick={() => startEdit(ut)}
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  {ut.code !== 'MEMBER' && ut.code !== 'ADMIN' && (
+                    <button
+                      className="icon-button danger"
+                      type="button"
+                      title="Xoá loại người dùng"
+                      aria-label={`Xoá ${ut.name}`}
+                      onClick={() => void remove(ut)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* BIỂU MẪU TẠO / SỬA USER TYPE */}
+        <form className="panel form admin-product-form" onSubmit={submit}>
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">{editing ? 'CHỈNH SỬA' : 'TẠO MỚI'}</span>
+              <h2>{editing ? 'Cập nhật loại user' : 'Thêm loại người dùng'}</h2>
+            </div>
+            {editing && <button className="text-button" type="button" onClick={reset}>Huỷ</button>}
+          </div>
+
+          {!editing && (
+            <label>
+              Mã loại (Code - In hoa, viết liền)
+              <input
+                value={draft.code}
+                onChange={(e) => change('code', e.target.value.toUpperCase())}
+                placeholder="VD: CTV, VIP, DAILY"
+                required
+              />
+            </label>
+          )}
+
+          <label>
+            Tên hiển thị
+            <input
+              value={draft.name}
+              onChange={(e) => change('name', e.target.value)}
+              placeholder="VD: Cộng tác viên, Khách VIP"
+              required
+            />
+          </label>
+
+          <label>
+            Chiết khấu giảm giá (%)
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={draft.discountPercent}
+              onChange={(e) => change('discountPercent', e.target.value)}
+              placeholder="VD: 10 (tức giảm 10% mọi đơn)"
+              required
+            />
+            <span className="field-hint">Áp dụng tự động trừ vào tổng tiền khi người dùng loại này tạo đơn</span>
+          </label>
+
+          <label>
+            Mô tả quyền lợi
+            <textarea
+              value={draft.description}
+              onChange={(e) => change('description', e.target.value)}
+              placeholder="Mô tả quyền lợi và điều kiện áp dụng cho nhóm này"
+            />
+          </label>
+
+          <label>
+            Màu sắc huy hiệu (Badge)
+            <select value={draft.color} onChange={(e) => change('color', e.target.value)}>
+              <option value="#0284c7">Xanh lam (Cộng tác viên / Reseller)</option>
+              <option value="#f59e0b">Vàng hổ phách (Khách VIP)</option>
+              <option value="#16a34a">Xanh lá cây (Đối tác thân thiết)</option>
+              <option value="#7c3aed">Tím quý phái (Quản trị viên / Master)</option>
+              <option value="#e11d48">Đỏ rực (Đại lý cấp 1)</option>
+              <option value="#64748b">Xám tiêu chuẩn (Thành viên)</option>
+            </select>
+          </label>
+
+          <button className="button button-primary" type="submit" disabled={saving}>
+            {saving ? 'Đang lưu...' : editing ? 'Lưu thay đổi' : 'Tạo loại người dùng'} <ArrowRight size={17} />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 type ProductDraft = { id: string; name: string; description: string; price: string; resellerPrice: string; stock: string; available: boolean };
 const emptyProductDraft: ProductDraft = { id: '', name: '', description: '', price: '', resellerPrice: '', stock: '', available: true };
