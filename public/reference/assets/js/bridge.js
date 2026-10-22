@@ -122,8 +122,46 @@
     box.textContent = message;
   };
 
+  const renderHomeLeaderboard = async () => {
+    const container = document.querySelector('.home-leaderboard-box .leaderboard-items');
+    if (!container) return;
+    try {
+      const response = await fetch(`${apiBase}/leaderboard`);
+      if (!response.ok) {
+        container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px 0;">Chưa có lượt nạp nào. Hãy nạp tiền để vinh danh Top 1!</div>';
+        return;
+      }
+      const json = await response.json();
+      const list = Array.isArray(json.data) ? json.data : [];
+      if (!list.length) {
+        container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px 0;">Chưa có lượt nạp nào. Hãy nạp tiền để vinh danh Top 1!</div>';
+        return;
+      }
+      const html = list.slice(0, 3).map((item, idx) => {
+        const rankColor = idx === 0 ? '#f59e0b' : idx === 1 ? '#64748b' : '#ea580c';
+        const rankBadge = idx === 0 ? '👑 #1' : idx === 1 ? '🥈 #2' : '🥉 #3';
+        const amountVnd = new Intl.NumberFormat('vi-VN').format(item.totalDeposited) + ' Xu';
+        const bg = idx === 0 ? 'linear-gradient(135deg, #fffbeb, #fef3c7)' : idx === 1 ? '#f8fafc' : '#fff7ed';
+        const border = idx === 0 ? '#fde68a' : idx === 1 ? '#e2e8f0' : '#fed7aa';
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:12px;background:${bg};margin-bottom:6px;border:1px solid ${border};">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-weight:900;font-size:13px;color:${rankColor};">${rankBadge}</span>
+              <strong style="font-size:13px;color:#0f172a;">${escapeHtml(item.username)}</strong>
+            </div>
+            <strong style="color:#0369a1;font-size:13px;font-weight:800;">${amountVnd}</strong>
+          </div>
+        `;
+      }).join('');
+      container.innerHTML = html;
+    } catch (_) {
+      container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px 0;">Chưa có lượt nạp nào. Hãy nạp tiền để vinh danh Top 1!</div>';
+    }
+  };
+
   syncAuthHeader();
   renderHomeProducts();
+  renderHomeLeaderboard();
   wireLinks();
 
   document.addEventListener('click', (event) => {

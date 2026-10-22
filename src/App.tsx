@@ -54,88 +54,15 @@ function sessionRole() {
   try { return JSON.parse(atob(token.split('.')[1])).role as string; } catch { return 'USER'; }
 }
 
-const mockProducts: Product[] = [
-  { id: 'chung-suc-1', name: 'Chung sức 1 rương', description: '1 rương SS, nhập mã sự kiện.', price: 30000, resellerPrice: 25000, available: true, stock: 99 },
-  { id: 'chung-suc-2', name: 'Chung sức 2 rương', description: '2 rương SS + S+, nhập mã sự kiện.', price: 45000, resellerPrice: 35000, available: true, stock: 99 },
-  { id: 'chung-suc-full', name: 'Chung sức full 3 rương', description: 'Full 3 rương Chung Sức.', price: 60000, resellerPrice: 50000, available: true, stock: 99 },
-  { id: 'acc-clone', name: 'Acc clone level 12', description: 'Acc clone bao full khi còn hàng.', price: 1000, resellerPrice: 800, available: true, stock: 12 }
-];
-
-const mockLeaderboard: LeaderboardEntry[] = [
-  { rank: 1, userId: 'usr_top1', username: 'bin_trum_aov', totalDeposited: 18500000, topupCount: 46 },
-  { rank: 2, userId: 'usr_top2', username: 'hoang_long_vip', totalDeposited: 12800000, topupCount: 31 },
-  { rank: 3, userId: 'usr_top3', username: 'nguyen_khanh_99', totalDeposited: 8950000, topupCount: 22 },
-  { rank: 4, userId: 'usr_top4', username: 'thanh_do_sv', totalDeposited: 5600000, topupCount: 16 },
-  { rank: 5, userId: 'usr_top5', username: 'quoc_bao_pro', totalDeposited: 4200000, topupCount: 12 },
-  { rank: 6, userId: 'usr_top6', username: 'minh_tuan_lq', totalDeposited: 2950000, topupCount: 9 },
-  { rank: 7, userId: 'usr_top7', username: 'duc_anh_gaming', totalDeposited: 2180000, topupCount: 7 },
-  { rank: 8, userId: 'usr_top8', username: 'hoang_nam_cs', totalDeposited: 1750000, topupCount: 5 },
-  { rank: 9, userId: 'usr_top9', username: 'van_thang_ss', totalDeposited: 1300000, topupCount: 4 },
-  { rank: 10, userId: 'usr_top10', username: 'anh_khoa_9x', totalDeposited: 950000, topupCount: 3 }
-];
-
-const defaultVouchers: Voucher[] = [
-  {
-    id: 'vch_1',
-    code: 'BINAOV10',
-    description: 'Giảm 10% cho mọi gói chung sức từ 30.000 Xu',
-    discountType: 'PERCENT',
-    discountValue: 10,
-    minOrderValue: 30000,
-    maxDiscount: 20000,
-    usageLimit: 100,
-    usedCount: 24,
-    active: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'vch_2',
-    code: 'CHUNGSUC5K',
-    description: 'Giảm ngay 5.000 Xu cho đơn hàng từ 45.000 Xu',
-    discountType: 'FIXED',
-    discountValue: 5000,
-    minOrderValue: 45000,
-    usageLimit: 200,
-    usedCount: 56,
-    active: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'vch_3',
-    code: 'VIP20',
-    description: 'Giảm 20% tối đa 30.000 Xu khi mua gói Full 3 rương',
-    discountType: 'PERCENT',
-    discountValue: 20,
-    minOrderValue: 60000,
-    maxDiscount: 30000,
-    usageLimit: 50,
-    usedCount: 14,
-    active: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'vch_4',
-    code: 'TANTHU8K',
-    description: 'Ưu đãi tân thủ giảm 8.000 Xu cho đơn từ 40.000 Xu',
-    discountType: 'FIXED',
-    discountValue: 8000,
-    minOrderValue: 40000,
-    usageLimit: 150,
-    usedCount: 68,
-    active: true,
-    createdAt: new Date().toISOString()
-  }
-];
-
 function getLocalVouchers(): Voucher[] {
   try {
     const raw = localStorage.getItem('binaov_vouchers');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {}
-  return defaultVouchers;
+  return [];
 }
 
 function saveLocalVouchers(list: Voucher[]) {
@@ -201,8 +128,94 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function Home() {
   const [products, setProducts] = useState<Product[]>([]);
-  useEffect(() => { api<{ data: Product[] }>('/products').then((result) => setProducts(result.data)).catch(() => undefined); }, []);
-  return <PublicShell><main><section className="hero"><div className="hero-copy"><span className="eyebrow">DỊCH VỤ CHUNG SỨC LIÊN QUÂN</span><h1>Đặt rương,<br /><em>xong trong 5 phút.</em></h1><p>Chọn gói, nhập mã sự kiện hoặc UID user. Đơn được chuyển thẳng về trang quản trị để xử lý.</p><div className="actions"><Link className="button button-primary" to="/order">Tạo đơn ngay <ArrowRight size={18} /></Link><Link className="button button-secondary" to="/topup">Nạp tiền</Link></div><div className="trust-row"><span><CheckCircle2 size={16} /> Hỗ trợ 5 phút</span><span><ShieldCheck size={16} /> Đơn được theo dõi</span></div></div><div className="hero-visual"><img src="/chests.jpg" alt="Minh họa dịch vụ chung sức" /><div className="banner-shade"><span className="visual-label">HỆ THỐNG ĐANG HOẠT ĐỘNG</span><strong>Đơn mới được admin xử lý liên tục</strong><span>Nhập đúng UID để đơn chạy nhanh hơn.</span></div></div></section><section className="section"><div className="section-heading"><div><span className="eyebrow">BẢNG GIÁ</span><h2>Dịch vụ đang mở</h2></div><Link to="/order">Xem tất cả <ArrowRight size={16} /></Link></div><div className="product-grid">{products.map((product) => <article className="product-card" key={product.id}><div className="product-icon"><WalletCards size={20} /></div><h3>{product.name}</h3><p>{product.description}</p><div className="price-row"><strong>{formatVnd(product.price)}</strong><span>Còn {product.stock ?? 'nhiều'}</span></div><Link className="button button-secondary full" to={`/order?product=${product.id}`}>Đặt ngay <ArrowRight size={16} /></Link></article>)}</div></section><section className="steps"><div><span className="eyebrow">QUY TRÌNH</span><h2>Đơn giản từ lúc nạp đến lúc hoàn tất.</h2></div><div className="step-list"><div><b>01</b><h3>Tạo tài khoản</h3><p>Đăng ký nhanh để lưu lịch sử đơn và số dư.</p></div><div><b>02</b><h3>Nạp Xu</h3><p>Chuyển khoản đúng nội dung, hệ thống tự đồng bộ.</p></div><div><b>03</b><h3>Gửi UID</h3><p>Nhập UID user, admin nhận đơn và cập nhật trạng thái.</p></div></div></section></main></PublicShell>;
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  useEffect(() => {
+    api<{ data: Product[] }>('/products').then((result) => setProducts(result.data)).catch(() => undefined);
+    api<{ data: LeaderboardEntry[] }>('/leaderboard').then((result) => {
+      if (Array.isArray(result.data)) setLeaderboard(result.data.slice(0, 3));
+    }).catch(() => undefined);
+  }, []);
+  return (
+    <PublicShell>
+      <main>
+        <section className="hero">
+          <div className="hero-copy">
+            <span className="eyebrow">DỊCH VỤ CHUNG SỨC LIÊN QUÂN</span>
+            <h1>Đặt rương,<br /><em>xong trong 5 phút.</em></h1>
+            <p>Chọn gói, nhập mã sự kiện hoặc UID user. Đơn được chuyển thẳng về trang quản trị để xử lý.</p>
+            <div className="actions">
+              <Link className="button button-primary" to="/order">Tạo đơn ngay <ArrowRight size={18} /></Link>
+              <Link className="button button-secondary" to="/topup">Nạp tiền</Link>
+              <Link className="button button-secondary" to="/leaderboard"><Trophy size={16} /> BXH Nạp</Link>
+            </div>
+            {leaderboard.length > 0 && (
+              <div style={{ marginTop: '16px', padding: '14px 16px', borderRadius: '16px', background: '#f8fafc', border: '1px solid var(--line)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <b style={{ fontSize: '13px', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Crown size={15} /> Top BXH Nạp Theo Tổng
+                  </b>
+                  <Link to="/leaderboard" style={{ fontSize: '12px', color: 'var(--blue)', fontWeight: 700 }}>Xem tất cả &rarr;</Link>
+                </div>
+                <div style={{ display: 'grid', gap: '6px' }}>
+                  {leaderboard.map((item, idx) => (
+                    <div key={item.userId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span>
+                        <b style={{ color: idx === 0 ? '#f59e0b' : idx === 1 ? '#64748b' : '#ea580c', marginRight: '6px' }}>#{item.rank}</b>
+                        <span>{item.username}</span>
+                      </span>
+                      <strong style={{ color: 'var(--blue-strong)' }}>{formatVnd(item.totalDeposited)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="trust-row" style={{ marginTop: '18px' }}>
+              <span><CheckCircle2 size={16} /> Hỗ trợ 5 phút</span>
+              <span><ShieldCheck size={16} /> Đơn được theo dõi</span>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <img src="/chests.jpg" alt="Minh họa dịch vụ chung sức" />
+            <div className="banner-shade">
+              <span className="visual-label">HỆ THỐNG ĐANG HOẠT ĐỘNG</span>
+              <strong>Đơn mới được admin xử lý liên tục</strong>
+              <span>Nhập đúng UID để đơn chạy nhanh hơn.</span>
+            </div>
+          </div>
+        </section>
+        <section className="section">
+          <div className="section-heading">
+            <div><span className="eyebrow">BẢNG GIÁ</span><h2>Dịch vụ đang mở</h2></div>
+            <Link to="/order">Xem tất cả <ArrowRight size={16} /></Link>
+          </div>
+          <div className="product-grid">
+            {products.map((product) => (
+              <article className="product-card" key={product.id}>
+                <div className="product-icon"><WalletCards size={20} /></div>
+                <h3>{product.name}</h3>
+                <p>{product.description}</p>
+                <div className="price-row">
+                  <strong>{formatVnd(product.price)}</strong>
+                  <span>Còn {product.stock ?? 'nhiều'}</span>
+                </div>
+                <Link className="button button-secondary full" to={`/order?product=${product.id}`}>
+                  Đặt ngay <ArrowRight size={16} />
+                </Link>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section className="steps">
+          <div><span className="eyebrow">QUY TRÌNH</span><h2>Đơn giản từ lúc nạp đến lúc hoàn tất.</h2></div>
+          <div className="step-list">
+            <div><b>01</b><h3>Tạo tài khoản</h3><p>Đăng ký nhanh để lưu lịch sử đơn và số dư.</p></div>
+            <div><b>02</b><h3>Nạp Xu</h3><p>Chuyển khoản đúng nội dung, hệ thống tự đồng bộ.</p></div>
+            <div><b>03</b><h3>Gửi UID</h3><p>Nhập UID user, admin nhận đơn và cập nhật trạng thái.</p></div>
+          </div>
+        </section>
+      </main>
+    </PublicShell>
+  );
 }
 
 function ReferenceHome() {
@@ -213,8 +226,9 @@ function OrderPage() {
   const [searchParams] = useSearchParams();
   const queryProduct = searchParams.get('product') || '';
   const queryVoucher = searchParams.get('voucher') || '';
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [productId, setProductId] = useState(queryProduct || 'chung-suc-1');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [productId, setProductId] = useState(queryProduct);
   const [uid, setUid] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
@@ -228,17 +242,18 @@ function OrderPage() {
   const [voucherNotice, setVoucherNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
+    setLoadingProducts(true);
     api<{ data: Product[] }>('/products').then((result) => {
       setProducts(result.data);
       if (queryProduct && result.data.some((p) => p.id === queryProduct)) {
         setProductId(queryProduct);
-      } else if (result.data.length > 0 && !result.data.some((p) => p.id === productId)) {
+      } else if (result.data.length > 0) {
         setProductId(result.data[0].id);
       }
-    }).catch(() => undefined);
+    }).catch(() => undefined).finally(() => setLoadingProducts(false));
 
     api<{ data: Voucher[] }>('/vouchers').then((result) => {
-      if (Array.isArray(result.data) && result.data.length > 0) {
+      if (Array.isArray(result.data)) {
         setVouchers(result.data);
       }
     }).catch(() => undefined);
@@ -533,12 +548,12 @@ function TopupPage() {
   const [amount, setAmount] = useState(100000);
   const [created, setCreated] = useState<{ transferContent: string; amount: number; bankAccount?: string; bankCode?: string; qrUrl?: string } | null>(null);
   const [message, setMessage] = useState('');
-  const [topRankers, setTopRankers] = useState<LeaderboardEntry[]>(() => mockLeaderboard.slice(0, 3));
+  const [topRankers, setTopRankers] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
     api<{ data: LeaderboardEntry[] }>('/leaderboard')
       .then((res) => {
-        if (Array.isArray(res.data) && res.data.length > 0) setTopRankers(res.data.slice(0, 3));
+        if (Array.isArray(res.data)) setTopRankers(res.data.slice(0, 3));
       })
       .catch(() => undefined);
   }, []);
@@ -636,17 +651,23 @@ function TopupPage() {
                   Xem BXH &rarr;
                 </Link>
               </div>
-              <div style={{ display: 'grid', gap: '6px' }}>
-                {topRankers.map((item, idx) => (
-                  <div key={item.userId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <b style={{ color: idx === 0 ? '#f59e0b' : idx === 1 ? '#64748b' : '#ea580c' }}>#{item.rank}</b>
-                      <span>{item.username}</span>
-                    </span>
-                    <strong style={{ color: 'var(--blue-strong)' }}>{formatVnd(item.totalDeposited)}</strong>
-                  </div>
-                ))}
-              </div>
+              {topRankers.length > 0 ? (
+                <div style={{ display: 'grid', gap: '6px' }}>
+                  {topRankers.map((item, idx) => (
+                    <div key={item.userId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <b style={{ color: idx === 0 ? '#f59e0b' : idx === 1 ? '#64748b' : '#ea580c' }}>#{item.rank}</b>
+                        <span>{item.username}</span>
+                      </span>
+                      <strong style={{ color: 'var(--blue-strong)' }}>{formatVnd(item.totalDeposited)}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '6px 0' }}>
+                  Chưa có giao dịch nạp. Hãy là người đầu tiên đứng Top 1!
+                </div>
+              )}
             </div>
 
             <div className="notice" style={{ marginBottom: '10px' }}>Sau khi chuyển khoản, giữ nguyên nội dung QR để hệ thống tự nhận diện.</div>
@@ -1010,31 +1031,25 @@ function Account() {
 }
 
 function LeaderboardPage() {
-  const [data, setData] = useState<LeaderboardEntry[]>(mockLeaderboard);
+  const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [period, setPeriod] = useState<'all' | 'month' | 'week'>('all');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     api<{ data: LeaderboardEntry[] }>('/leaderboard')
       .then((res) => {
-        if (Array.isArray(res.data) && res.data.length > 0) {
+        if (Array.isArray(res.data)) {
           setData(res.data);
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
   }, []);
 
   const displayedData = useMemo(() => {
-    if (period === 'all') return data;
-    const factor = period === 'month' ? 0.42 : 0.16;
-    return data
-      .map((item, i) => ({
-        ...item,
-        totalDeposited: Math.round((item.totalDeposited * factor) / 10000) * 10000 + 20000,
-        topupCount: Math.max(1, Math.round((item.topupCount ?? (10 - i)) * factor))
-      }))
-      .sort((a, b) => b.totalDeposited - a.totalDeposited)
-      .map((item, idx) => ({ ...item, rank: idx + 1 }));
-  }, [data, period]);
+    return data;
+  }, [data]);
 
   const top1 = displayedData[0];
   const top2 = displayedData[1];
@@ -1093,93 +1108,113 @@ function LeaderboardPage() {
           </div>
         </div>
 
-        {/* PODIUM TOP 1 2 3 */}
-        {displayedData.length >= 3 && (
-          <section className="leaderboard-podium">
-            {/* TOP 2 */}
-            {top2 && (
-              <div className="podium-card rank-2">
-                <div className="podium-avatar">
-                  {top2.username.charAt(0).toUpperCase()}
+        {/* PODIUM & DANH SÁCH HOẶC EMPTY STATE */}
+        {loading ? (
+          <div className="panel admin-loading" style={{ padding: '40px', textAlign: 'center' }}>
+            Đang tải dữ liệu bảng xếp hạng từ hệ thống...
+          </div>
+        ) : displayedData.length === 0 ? (
+          <div className="panel" style={{ textAlign: 'center', padding: '52px 20px', borderRadius: '24px' }}>
+            <Trophy size={48} style={{ color: '#cbd5e1', margin: '0 auto 14px' }} />
+            <h2 style={{ fontSize: '22px', color: 'var(--ink)', marginBottom: '8px' }}>Chưa có lượt nạp nào trong hệ thống</h2>
+            <p style={{ color: 'var(--muted)', maxWidth: '460px', margin: '0 auto 24px', fontSize: '14px', lineHeight: 1.6 }}>
+              Hiện tại hệ thống chưa ghi nhận giao dịch nạp Xu nào. Hãy nạp tiền ngay hôm nay để đứng vị trí Quán Quân Top 1 Đại Gia BINAOV!
+            </p>
+            <Link className="button button-primary" to="/topup">
+              <Flame size={16} /> Nạp Xu ngay để đứng Top 1
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* PODIUM TOP 1 2 3 */}
+            <section className="leaderboard-podium">
+              {/* TOP 2 */}
+              {top2 && (
+                <div className="podium-card rank-2">
+                  <div className="podium-avatar">
+                    {top2.username.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="podium-rank-badge">
+                    <Medal size={13} /> Hạng 2
+                  </span>
+                  <strong className="podium-username">{top2.username}</strong>
+                  <span className="podium-title">{getRankTitle(2)}</span>
+                  <strong className="podium-amount">{formatVnd(top2.totalDeposited)}</strong>
+                  <span className="podium-reward">Thưởng +7% Xu nạp &middot; Đơn VIP</span>
                 </div>
-                <span className="podium-rank-badge">
-                  <Medal size={13} /> Hạng 2
-                </span>
-                <strong className="podium-username">{top2.username}</strong>
-                <span className="podium-title">{getRankTitle(2)}</span>
-                <strong className="podium-amount">{formatVnd(top2.totalDeposited)}</strong>
-                <span className="podium-reward">Thưởng +7% Xu nạp &middot; Đơn VIP</span>
-              </div>
-            )}
+              )}
 
-            {/* TOP 1 */}
-            {top1 && (
-              <div className="podium-card rank-1">
-                <Crown size={34} className="podium-crown" />
-                <div className="podium-avatar">
-                  {top1.username.charAt(0).toUpperCase()}
+              {/* TOP 1 */}
+              {top1 && (
+                <div className="podium-card rank-1">
+                  <Crown size={34} className="podium-crown" />
+                  <div className="podium-avatar">
+                    {top1.username.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="podium-rank-badge">
+                    <Crown size={13} /> Quán Quân Top 1
+                  </span>
+                  <strong className="podium-username" style={{ fontSize: '18px' }}>{top1.username}</strong>
+                  <span className="podium-title" style={{ color: '#b45309', fontWeight: 800 }}>{getRankTitle(1)}</span>
+                  <strong className="podium-amount">{formatVnd(top1.totalDeposited)}</strong>
+                  <span className="podium-reward">Thưởng +10% Xu nạp &middot; Quyền lợi Chí Tôn</span>
                 </div>
-                <span className="podium-rank-badge">
-                  <Crown size={13} /> Quán Quân Top 1
-                </span>
-                <strong className="podium-username" style={{ fontSize: '18px' }}>{top1.username}</strong>
-                <span className="podium-title" style={{ color: '#b45309', fontWeight: 800 }}>{getRankTitle(1)}</span>
-                <strong className="podium-amount">{formatVnd(top1.totalDeposited)}</strong>
-                <span className="podium-reward">Thưởng +10% Xu nạp &middot; Quyền lợi Chí Tôn</span>
-              </div>
-            )}
+              )}
 
-            {/* TOP 3 */}
-            {top3 && (
-              <div className="podium-card rank-3">
-                <div className="podium-avatar">
-                  {top3.username.charAt(0).toUpperCase()}
+              {/* TOP 3 */}
+              {top3 && (
+                <div className="podium-card rank-3">
+                  <div className="podium-avatar">
+                    {top3.username.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="podium-rank-badge">
+                    <Medal size={13} /> Hạng 3
+                  </span>
+                  <strong className="podium-username">{top3.username}</strong>
+                  <span className="podium-title">{getRankTitle(3)}</span>
+                  <strong className="podium-amount">{formatVnd(top3.totalDeposited)}</strong>
+                  <span className="podium-reward">Thưởng +5% Xu nạp &middot; Đơn VIP</span>
                 </div>
-                <span className="podium-rank-badge">
-                  <Medal size={13} /> Hạng 3
-                </span>
-                <strong className="podium-username">{top3.username}</strong>
-                <span className="podium-title">{getRankTitle(3)}</span>
-                <strong className="podium-amount">{formatVnd(top3.totalDeposited)}</strong>
-                <span className="podium-reward">Thưởng +5% Xu nạp &middot; Đơn VIP</span>
-              </div>
+              )}
+            </section>
+
+            {/* DANH SÁCH CHI TIẾT TỪ TOP 4 TRỞ ĐI */}
+            {rest.length > 0 && (
+              <section className="panel" style={{ padding: '24px' }}>
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">DANH SÁCH CHI TIẾT</span>
+                    <h2>Top đại gia tiếp theo</h2>
+                  </div>
+                  <span className="muted">Cập nhật theo thời gian thực</span>
+                </div>
+
+                <div className="leaderboard-list">
+                  {rest.map((entry) => (
+                    <div className="leaderboard-row" key={entry.userId}>
+                      <div className="leaderboard-user-info">
+                        <div className="rank-number">
+                          #{entry.rank}
+                        </div>
+                        <div className="user-avatar-sm">
+                          {entry.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="user-names">
+                          <strong>{entry.username}</strong>
+                          <span>{getRankTitle(entry.rank)} &middot; {entry.topupCount ?? 1} lượt nạp</span>
+                        </div>
+                      </div>
+                      <div className="leaderboard-stats">
+                        <strong>{formatVnd(entry.totalDeposited)}</strong>
+                        <span>Tổng nạp</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
-          </section>
+          </>
         )}
-
-        {/* DANH SÁCH CHI TIẾT TỪ TOP 4 TRỞ ĐI */}
-        <section className="panel" style={{ padding: '24px' }}>
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">DANH SÁCH CHI TIẾT</span>
-              <h2>Top đại gia tiếp theo</h2>
-            </div>
-            <span className="muted">Cập nhật theo thời gian thực</span>
-          </div>
-
-          <div className="leaderboard-list">
-            {rest.map((entry) => (
-              <div className="leaderboard-row" key={entry.userId}>
-                <div className="leaderboard-user-info">
-                  <div className="rank-number">
-                    #{entry.rank}
-                  </div>
-                  <div className="user-avatar-sm">
-                    {entry.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="user-names">
-                    <strong>{entry.username}</strong>
-                    <span>{getRankTitle(entry.rank)} &middot; {entry.topupCount ?? 1} lượt nạp</span>
-                  </div>
-                </div>
-                <div className="leaderboard-stats">
-                  <strong>{formatVnd(entry.totalDeposited)}</strong>
-                  <span>Tổng nạp</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* ĐẶC QUYỀN ĐUA TOP */}
         <div className="rewards-grid">
