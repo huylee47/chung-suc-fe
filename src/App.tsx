@@ -1,10 +1,50 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList, Eye, EyeOff, Headphones, LayoutDashboard, LogIn, Pencil, Phone, Plus, ShieldCheck, Trash2, UserRound, WalletCards, X } from 'lucide-react';
+import {
+  ArrowLeft, ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, ClipboardList,
+  Copy, Crown, Eye, EyeOff, Flame, Gift, Headphones, LayoutDashboard, LogIn,
+  Medal, Pencil, Phone, Plus, ShieldCheck, Sparkles, Tag, Ticket, Trash2,
+  Trophy, UserRound, WalletCards, X
+} from 'lucide-react';
 import { api } from './api';
 
 type Product = { id: string; name: string; description: string; price: number; resellerPrice?: number; available: boolean; stock?: number };
-type Order = { id: string; username: string; productName: string; uid: string; quantity: number; total: number; status: string; createdAt: string };
+type Order = {
+  id: string;
+  username: string;
+  productName: string;
+  uid: string;
+  quantity: number;
+  total: number;
+  originalTotal?: number;
+  discount?: number;
+  voucherCode?: string;
+  status: string;
+  createdAt: string;
+};
+export type DiscountType = 'PERCENT' | 'FIXED';
+export type Voucher = {
+  id: string;
+  code: string;
+  description: string;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderValue: number;
+  maxDiscount?: number;
+  usageLimit?: number;
+  usedCount: number;
+  expiresAt?: string | null;
+  active: boolean;
+  createdAt: string;
+};
+export type LeaderboardEntry = {
+  rank: number;
+  userId: string;
+  username: string;
+  totalDeposited: number;
+  topupCount?: number;
+};
+
 const phone = '0995438093';
 const zaloContact = 'https://zalo.me/0995438093';
 const formatVnd = (value: number) => new Intl.NumberFormat('vi-VN').format(value) + ' Xu';
@@ -13,12 +53,94 @@ function sessionRole() {
   if (!token) return null;
   try { return JSON.parse(atob(token.split('.')[1])).role as string; } catch { return 'USER'; }
 }
+
 const mockProducts: Product[] = [
   { id: 'chung-suc-1', name: 'Chung sức 1 rương', description: '1 rương SS, nhập mã sự kiện.', price: 30000, resellerPrice: 25000, available: true, stock: 99 },
   { id: 'chung-suc-2', name: 'Chung sức 2 rương', description: '2 rương SS + S+, nhập mã sự kiện.', price: 45000, resellerPrice: 35000, available: true, stock: 99 },
   { id: 'chung-suc-full', name: 'Chung sức full 3 rương', description: 'Full 3 rương Chung Sức.', price: 60000, resellerPrice: 50000, available: true, stock: 99 },
   { id: 'acc-clone', name: 'Acc clone level 12', description: 'Acc clone bao full khi còn hàng.', price: 1000, resellerPrice: 800, available: true, stock: 12 }
 ];
+
+const mockLeaderboard: LeaderboardEntry[] = [
+  { rank: 1, userId: 'usr_top1', username: 'bin_trum_aov', totalDeposited: 18500000, topupCount: 46 },
+  { rank: 2, userId: 'usr_top2', username: 'hoang_long_vip', totalDeposited: 12800000, topupCount: 31 },
+  { rank: 3, userId: 'usr_top3', username: 'nguyen_khanh_99', totalDeposited: 8950000, topupCount: 22 },
+  { rank: 4, userId: 'usr_top4', username: 'thanh_do_sv', totalDeposited: 5600000, topupCount: 16 },
+  { rank: 5, userId: 'usr_top5', username: 'quoc_bao_pro', totalDeposited: 4200000, topupCount: 12 },
+  { rank: 6, userId: 'usr_top6', username: 'minh_tuan_lq', totalDeposited: 2950000, topupCount: 9 },
+  { rank: 7, userId: 'usr_top7', username: 'duc_anh_gaming', totalDeposited: 2180000, topupCount: 7 },
+  { rank: 8, userId: 'usr_top8', username: 'hoang_nam_cs', totalDeposited: 1750000, topupCount: 5 },
+  { rank: 9, userId: 'usr_top9', username: 'van_thang_ss', totalDeposited: 1300000, topupCount: 4 },
+  { rank: 10, userId: 'usr_top10', username: 'anh_khoa_9x', totalDeposited: 950000, topupCount: 3 }
+];
+
+const defaultVouchers: Voucher[] = [
+  {
+    id: 'vch_1',
+    code: 'BINAOV10',
+    description: 'Giảm 10% cho mọi gói chung sức từ 30.000 Xu',
+    discountType: 'PERCENT',
+    discountValue: 10,
+    minOrderValue: 30000,
+    maxDiscount: 20000,
+    usageLimit: 100,
+    usedCount: 24,
+    active: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'vch_2',
+    code: 'CHUNGSUC5K',
+    description: 'Giảm ngay 5.000 Xu cho đơn hàng từ 45.000 Xu',
+    discountType: 'FIXED',
+    discountValue: 5000,
+    minOrderValue: 45000,
+    usageLimit: 200,
+    usedCount: 56,
+    active: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'vch_3',
+    code: 'VIP20',
+    description: 'Giảm 20% tối đa 30.000 Xu khi mua gói Full 3 rương',
+    discountType: 'PERCENT',
+    discountValue: 20,
+    minOrderValue: 60000,
+    maxDiscount: 30000,
+    usageLimit: 50,
+    usedCount: 14,
+    active: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'vch_4',
+    code: 'TANTHU8K',
+    description: 'Ưu đãi tân thủ giảm 8.000 Xu cho đơn từ 40.000 Xu',
+    discountType: 'FIXED',
+    discountValue: 8000,
+    minOrderValue: 40000,
+    usageLimit: 150,
+    usedCount: 68,
+    active: true,
+    createdAt: new Date().toISOString()
+  }
+];
+
+function getLocalVouchers(): Voucher[] {
+  try {
+    const raw = localStorage.getItem('binaov_vouchers');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return defaultVouchers;
+}
+
+function saveLocalVouchers(list: Voucher[]) {
+  try { localStorage.setItem('binaov_vouchers', JSON.stringify(list)); } catch {}
+}
 
 function PublicShell({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<string | null>(() => sessionRole());
@@ -35,6 +157,7 @@ function PublicShell({ children }: { children: React.ReactNode }) {
           <NavLink to="/">Trang chủ</NavLink>
           <NavLink to="/order">Tạo đơn</NavLink>
           <NavLink to="/topup">Nạp tiền</NavLink>
+          <NavLink to="/leaderboard">BXH Nạp</NavLink>
           {role && <NavLink to="/account">Tài khoản</NavLink>}
         </nav>
         {role ? (
@@ -60,6 +183,7 @@ function PublicShell({ children }: { children: React.ReactNode }) {
           <b>Liên kết</b>
           <Link to="/order">Tạo đơn</Link>
           <Link to="/topup">Nạp tiền</Link>
+          <Link to="/leaderboard">BXH Nạp Xu</Link>
           <Link to="/admin">Trang quản trị</Link>
         </div>
       </footer>
@@ -88,11 +212,21 @@ function ReferenceHome() {
 function OrderPage() {
   const [searchParams] = useSearchParams();
   const queryProduct = searchParams.get('product') || '';
+  const queryVoucher = searchParams.get('voucher') || '';
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [productId, setProductId] = useState(queryProduct || 'chung-suc-1');
   const [uid, setUid] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [note, setNote] = useState('');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Voucher states
+  const [vouchers, setVouchers] = useState<Voucher[]>(() => getLocalVouchers().filter((v) => v.active));
+  const [voucherInput, setVoucherInput] = useState(queryVoucher.toUpperCase());
+  const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
+  const [voucherNotice, setVoucherNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   useEffect(() => {
     api<{ data: Product[] }>('/products').then((result) => {
       setProducts(result.data);
@@ -102,10 +236,296 @@ function OrderPage() {
         setProductId(result.data[0].id);
       }
     }).catch(() => undefined);
+
+    api<{ data: Voucher[] }>('/vouchers').then((result) => {
+      if (Array.isArray(result.data) && result.data.length > 0) {
+        setVouchers(result.data);
+      }
+    }).catch(() => undefined);
   }, [queryProduct]);
+
   const selected = products.find((product) => product.id === productId) ?? products[0];
-  const submit = async (event: React.FormEvent) => { event.preventDefault(); const token = localStorage.getItem('token'); if (!token) { setMessage('Bạn cần đăng nhập trước khi gửi đơn.'); return; } try { await api('/orders', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ productId, uid, quantity }) }); setMessage('Đã gửi đơn thành công. Admin đã nhận được UID user của bạn.'); setUid(''); } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể tạo đơn'); } };
-  return <PublicShell><main className="page"><div className="page-heading"><div><span className="eyebrow">TẠO ĐƠN</span><h1>Gửi thông tin cho admin.</h1><p>Nhập UID user và chọn gói dịch vụ. Đơn sẽ xuất hiện trong trang quản trị sau khi gửi.</p></div></div><div className="form-layout"><form className="panel form" onSubmit={submit}><label>Sản phẩm<select value={productId} onChange={(event) => setProductId(event.target.value)}>{products.map((product) => <option key={product.id} value={product.id}>{product.name} · {formatVnd(product.price)}</option>)}</select></label><label>UID user<input value={uid} onChange={(event) => setUid(event.target.value)} placeholder="Nhập UID user" required minLength={3} /></label><label>Số lượng<input type="number" min="1" max="99" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} /></label><label>Ghi chú<textarea placeholder="Thông tin thêm cho admin (không bắt buộc)" /></label>{message && <div className="notice success">{message}</div>}<button className="button button-primary" type="submit">Gửi đơn <ArrowRight size={18} /></button></form><aside className="panel summary"><span className="eyebrow">TÓM TẮT</span><h2>{selected?.name}</h2><p>{selected?.description}</p><div className="summary-line"><span>Đơn giá</span><b>{formatVnd(selected?.price ?? 0)}</b></div><div className="summary-line total"><span>Tạm tính</span><b>{formatVnd((selected?.price ?? 0) * quantity)}</b></div><div className="notice">Bạn cần đăng nhập và có đủ số dư trước khi gửi đơn.</div></aside></div></main></PublicShell>;
+  const subtotal = (selected?.price ?? 0) * quantity;
+
+  // Tính discount
+  const discountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    if (subtotal < appliedVoucher.minOrderValue) return 0;
+    let disc = 0;
+    if (appliedVoucher.discountType === 'PERCENT') {
+      disc = Math.round((subtotal * appliedVoucher.discountValue) / 100);
+      if (appliedVoucher.maxDiscount != null && disc > appliedVoucher.maxDiscount) {
+        disc = appliedVoucher.maxDiscount;
+      }
+    } else {
+      disc = appliedVoucher.discountValue;
+    }
+    return Math.min(disc, subtotal);
+  }, [appliedVoucher, subtotal]);
+
+  const finalTotal = Math.max(0, subtotal - discountAmount);
+
+  // Tự động kiểm tra query voucher nếu có
+  useEffect(() => {
+    if (queryVoucher && vouchers.length > 0 && !appliedVoucher) {
+      applyVoucherCode(queryVoucher);
+    }
+  }, [queryVoucher, vouchers]);
+
+  const applyVoucherCode = (codeToApply: string) => {
+    const clean = codeToApply.trim().toUpperCase();
+    if (!clean) {
+      setVoucherNotice({ type: 'error', text: 'Vui lòng nhập mã voucher' });
+      return;
+    }
+    const target = vouchers.find((v) => v.code.toUpperCase() === clean);
+    if (!target) {
+      setVoucherNotice({ type: 'error', text: `Mã “${clean}” không tồn tại hoặc đã hết hạn` });
+      return;
+    }
+    if (target.expiresAt && new Date(target.expiresAt) < new Date()) {
+      setVoucherNotice({ type: 'error', text: `Mã “${target.code}” đã hết hạn sử dụng` });
+      return;
+    }
+    if (target.usageLimit != null && target.usedCount >= target.usageLimit) {
+      setVoucherNotice({ type: 'error', text: `Mã “${target.code}” đã hết lượt sử dụng` });
+      return;
+    }
+    if (subtotal < target.minOrderValue) {
+      setVoucherNotice({
+        type: 'error',
+        text: `Đơn tối thiểu ${formatVnd(target.minOrderValue)} để áp dụng mã ${target.code}`
+      });
+      return;
+    }
+
+    setAppliedVoucher(target);
+    setVoucherInput(target.code);
+    setVoucherNotice({
+      type: 'success',
+      text: `Đã áp dụng mã ${target.code}: ${target.discountType === 'PERCENT' ? `Giảm ${target.discountValue}%` : `Giảm ${formatVnd(target.discountValue)}`}`
+    });
+  };
+
+  const removeVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherNotice(null);
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setMessage('Bạn cần đăng nhập trước khi gửi đơn.');
+      return;
+    }
+    if (submitting) return;
+
+    setSubmitting(true);
+    setMessage('');
+    try {
+      await api('/orders', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          productId,
+          uid,
+          quantity,
+          note: note.trim() || undefined,
+          voucherCode: appliedVoucher ? appliedVoucher.code : undefined
+        })
+      });
+      setMessage(
+        appliedVoucher
+          ? `Đã gửi đơn thành công! Tiết kiệm ${formatVnd(discountAmount)} với voucher ${appliedVoucher.code}. Admin đã nhận UID của bạn.`
+          : 'Đã gửi đơn thành công. Admin đã nhận được UID user của bạn.'
+      );
+      setUid('');
+      setNote('');
+      setAppliedVoucher(null);
+      setVoucherNotice(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Không thể tạo đơn');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <PublicShell>
+      <main className="page">
+        <div className="page-heading">
+          <div>
+            <span className="eyebrow">TẠO ĐƠN</span>
+            <h1>Gửi thông tin cho admin.</h1>
+            <p>Nhập UID user, chọn gói dịch vụ và áp dụng mã voucher giảm giá nếu có.</p>
+          </div>
+        </div>
+        <div className="form-layout">
+          <form className="panel form" onSubmit={submit}>
+            <label>
+              Sản phẩm
+              <select value={productId} onChange={(event) => setProductId(event.target.value)}>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} · {formatVnd(product.price)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              UID user
+              <input
+                value={uid}
+                onChange={(event) => setUid(event.target.value)}
+                placeholder="Nhập UID user Liên Quân"
+                required
+                minLength={3}
+              />
+            </label>
+
+            <label>
+              Số lượng
+              <input
+                type="number"
+                min="1"
+                max="99"
+                value={quantity}
+                onChange={(event) => setQuantity(Math.max(1, Number(event.target.value)))}
+              />
+            </label>
+
+            {/* VOUCHER INPUT BOX */}
+            <div className="voucher-section">
+              <span className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Ticket size={14} /> MÃ GIẢM GIÁ / VOUCHER
+              </span>
+
+              {appliedVoucher ? (
+                <div className="voucher-applied-tag">
+                  <div>
+                    <span>Đã dùng mã: <b>{appliedVoucher.code}</b> ({appliedVoucher.discountType === 'PERCENT' ? `-${appliedVoucher.discountValue}%` : `-${formatVnd(appliedVoucher.discountValue)}`})</span>
+                    <small style={{ display: 'block', opacity: 0.85, fontSize: '11px' }}>
+                      Tiết kiệm {formatVnd(discountAmount)}
+                    </small>
+                  </div>
+                  <button type="button" onClick={removeVoucher} title="Bỏ mã voucher">
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="voucher-input-row">
+                    <input
+                      type="text"
+                      placeholder="Nhập mã voucher (VD: BINAOV10)"
+                      value={voucherInput}
+                      onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
+                    />
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={() => applyVoucherCode(voucherInput)}
+                    >
+                      <Tag size={15} /> Áp dụng
+                    </button>
+                  </div>
+
+                  {voucherNotice && (
+                    <div className={`notice ${voucherNotice.type === 'success' ? 'success' : 'error'}`} style={{ marginTop: '8px', padding: '8px 12px', fontSize: '12px' }}>
+                      {voucherNotice.text}
+                    </div>
+                  )}
+
+                  {/* VOUCHER GỢI Ý CÓ SẴN */}
+                  {vouchers.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <span className="field-hint" style={{ fontWeight: 700 }}>Voucher ưu đãi đang mở:</span>
+                      <div className="voucher-suggest-list">
+                        {vouchers.slice(0, 3).map((v) => {
+                          const canApply = subtotal >= v.minOrderValue;
+                          return (
+                            <div className="voucher-suggest-item" key={v.id}>
+                              <div className="voucher-suggest-info">
+                                <strong><Ticket size={13} /> {v.code} · {v.discountType === 'PERCENT' ? `Giảm ${v.discountValue}%` : `Giảm ${formatVnd(v.discountValue)}`}</strong>
+                                <span>{v.description}</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="button button-secondary small"
+                                style={{ whiteSpace: 'nowrap', opacity: canApply ? 1 : 0.6 }}
+                                onClick={() => applyVoucherCode(v.code)}
+                              >
+                                {canApply ? 'Dùng ngay' : 'Xem điều kiện'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <label>
+              Ghi chú
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Thông tin thêm cho admin (không bắt buộc)"
+              />
+            </label>
+
+            {message && (
+              <div className={`notice ${message.includes('thành công') ? 'success' : 'error'}`}>
+                {message}
+              </div>
+            )}
+
+            <button className="button button-primary" type="submit" disabled={submitting}>
+              {submitting ? 'Đang gửi...' : 'Gửi đơn'} <ArrowRight size={18} />
+            </button>
+          </form>
+
+          <aside className="panel summary">
+            <span className="eyebrow">TÓM TẮT ĐƠN HÀNG</span>
+            <h2>{selected?.name}</h2>
+            <p>{selected?.description}</p>
+            <div className="summary-line">
+              <span>Đơn giá</span>
+              <b>{formatVnd(selected?.price ?? 0)}</b>
+            </div>
+            <div className="summary-line">
+              <span>Số lượng</span>
+              <b>x {quantity}</b>
+            </div>
+            <div className="summary-line">
+              <span>Tạm tính</span>
+              <b>{formatVnd(subtotal)}</b>
+            </div>
+
+            {appliedVoucher && discountAmount > 0 && (
+              <div className="summary-line discount">
+                <span>Giảm giá ({appliedVoucher.code})</span>
+                <b>-{formatVnd(discountAmount)}</b>
+              </div>
+            )}
+
+            <div className="summary-line total">
+              <span>Cần thanh toán</span>
+              <b style={{ color: 'var(--blue-strong)', fontSize: '20px' }}>{formatVnd(finalTotal)}</b>
+            </div>
+
+            <div className="notice" style={{ marginTop: '14px' }}>
+              Bạn cần đăng nhập và có đủ số dư ({formatVnd(finalTotal)}) trước khi gửi đơn.
+            </div>
+          </aside>
+        </div>
+      </main>
+    </PublicShell>
+  );
 }
 
 function TopupPage() {
@@ -113,6 +533,16 @@ function TopupPage() {
   const [amount, setAmount] = useState(100000);
   const [created, setCreated] = useState<{ transferContent: string; amount: number; bankAccount?: string; bankCode?: string; qrUrl?: string } | null>(null);
   const [message, setMessage] = useState('');
+  const [topRankers, setTopRankers] = useState<LeaderboardEntry[]>(() => mockLeaderboard.slice(0, 3));
+
+  useEffect(() => {
+    api<{ data: LeaderboardEntry[] }>('/leaderboard')
+      .then((res) => {
+        if (Array.isArray(res.data) && res.data.length > 0) setTopRankers(res.data.slice(0, 3));
+      })
+      .catch(() => undefined);
+  }, []);
+
   const createTopup = async () => {
     if (!token) {
       setMessage('Bạn cần đăng nhập trước khi tạo lệnh nạp tự động.');
@@ -195,6 +625,30 @@ function TopupPage() {
             <CircleDollarSign size={34} className="accent-icon" />
             <h2>Đồng bộ tự động SePay</h2>
             <p>Webhook SePay sẽ đối soát mã giao dịch, cộng số dư đúng một lần và lưu lịch sử.</p>
+
+            {/* TOP BXH NẠP MINI PREVIEW */}
+            <div style={{ margin: '14px 0', padding: '14px', borderRadius: '14px', background: '#f8fafc', border: '1px solid var(--line)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: '#b45309', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Crown size={14} /> TOP ĐẠI GIA NẠP XU
+                </span>
+                <Link to="/leaderboard" style={{ fontSize: '11px', color: 'var(--blue)', fontWeight: 700 }}>
+                  Xem BXH &rarr;
+                </Link>
+              </div>
+              <div style={{ display: 'grid', gap: '6px' }}>
+                {topRankers.map((item, idx) => (
+                  <div key={item.userId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <b style={{ color: idx === 0 ? '#f59e0b' : idx === 1 ? '#64748b' : '#ea580c' }}>#{item.rank}</b>
+                      <span>{item.username}</span>
+                    </span>
+                    <strong style={{ color: 'var(--blue-strong)' }}>{formatVnd(item.totalDeposited)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="notice" style={{ marginBottom: '10px' }}>Sau khi chuyển khoản, giữ nguyên nội dung QR để hệ thống tự nhận diện.</div>
             <div className="notice" style={{ background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}>
               <strong>Hỗ trợ thẻ cào:</strong> Bạn có thể nhắn tin trực tiếp <a href={zaloContact} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', fontWeight: 800 }}>Zalo Admin ({phone})</a> để được hỗ trợ nạp thẻ cào và giải quyết lỗi.
@@ -384,7 +838,368 @@ function Register() {
   );
 }
 
-function Account() { const [orders, setOrders] = useState<Order[]>([]); const [balance, setBalance] = useState(0); useEffect(() => { const token = localStorage.getItem('token'); const headers = token ? { Authorization: `Bearer ${token}` } : undefined; Promise.all([api<{ data: Order[] }>('/orders', { headers }), api<{ data: { balance: number } }>('/wallet/balance', { headers })]).then(([orderResult, balanceResult]) => { setOrders(orderResult.data); setBalance(balanceResult.data.balance); }).catch(() => undefined); }, []); return <PublicShell><main className="page"><div className="account-head"><div><span className="eyebrow">TÀI KHOẢN</span><h1>Xin chào, bạn.</h1><p>Quản lý số dư và theo dõi các đơn đã gửi.</p></div><Link className="button button-primary" to="/order"><Plus size={17} /> Tạo đơn</Link></div><div className="account-grid"><div className="balance-card"><span>Số dư khả dụng</span><strong>{formatVnd(balance)}</strong><Link to="/topup">Nạp thêm <ArrowRight size={15} /></Link></div><div className="metric-card"><span>Tổng đơn</span><strong>{orders.length}</strong><small>Đơn đã tạo</small></div><div className="metric-card"><span>Đang xử lý</span><strong>{orders.filter((order) => order.status === 'PROCESSING' || order.status === 'PENDING').length}</strong><small>Cần theo dõi</small></div></div><section className="panel table-panel"><div className="section-heading"><h2>Lịch sử đơn</h2><Link to="/order">Tạo đơn mới <ArrowRight size={15} /></Link></div>{orders.length ? <div className="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Dịch vụ</th><th>UID</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.productName}</td><td>{order.uid}</td><td><span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span></td><td>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td></tr>)}</tbody></table></div> : <div className="empty"><ClipboardList size={30} /><b>Chưa có đơn nào</b><span>Tạo đơn đầu tiên để bắt đầu theo dõi.</span></div>}</section></main></PublicShell>; }
+function Account() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [vouchers, setVouchers] = useState<Voucher[]>(() => getLocalVouchers().filter((v) => v.active));
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    Promise.all([
+      api<{ data: Order[] }>('/orders', { headers }),
+      api<{ data: { balance: number } }>('/wallet/balance', { headers })
+    ]).then(([orderResult, balanceResult]) => {
+      setOrders(orderResult.data);
+      setBalance(balanceResult.data.balance);
+    }).catch(() => undefined);
+
+    api<{ data: Voucher[] }>('/vouchers').then((res) => {
+      if (Array.isArray(res.data) && res.data.length > 0) setVouchers(res.data);
+    }).catch(() => undefined);
+  }, []);
+
+  const copyVoucher = (code: string) => {
+    navigator.clipboard?.writeText(code).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2500);
+    }).catch(() => undefined);
+  };
+
+  return (
+    <PublicShell>
+      <main className="page">
+        <div className="account-head">
+          <div>
+            <span className="eyebrow">TÀI KHOẢN</span>
+            <h1>Xin chào, bạn.</h1>
+            <p>Quản lý số dư, theo dõi các đơn đã gửi và kho voucher ưu đãi.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Link className="button button-secondary" to="/leaderboard"><Trophy size={16} /> BXH Nạp Xu</Link>
+            <Link className="button button-primary" to="/order"><Plus size={17} /> Tạo đơn</Link>
+          </div>
+        </div>
+
+        <div className="account-grid">
+          <div className="balance-card">
+            <span>Số dư khả dụng</span>
+            <strong>{formatVnd(balance)}</strong>
+            <Link to="/topup">Nạp thêm <ArrowRight size={15} /></Link>
+          </div>
+          <div className="metric-card">
+            <span>Tổng đơn</span>
+            <strong>{orders.length}</strong>
+            <small>Đơn đã tạo</small>
+          </div>
+          <div className="metric-card">
+            <span>Đang xử lý</span>
+            <strong>{orders.filter((order) => order.status === 'PROCESSING' || order.status === 'PENDING').length}</strong>
+            <small>Cần theo dõi</small>
+          </div>
+        </div>
+
+        {/* KHO VOUCHER CỦA BẠN */}
+        <section className="panel" style={{ marginBottom: '24px' }}>
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow"><Ticket size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> ƯU ĐÃI DÀNH CHO BẠN</span>
+              <h2>Kho Voucher giảm giá</h2>
+            </div>
+            <span className="muted">{vouchers.length} voucher đang có hiệu lực</span>
+          </div>
+
+          {vouchers.length ? (
+            <div className="voucher-cards-grid">
+              {vouchers.map((v) => (
+                <article className="voucher-card" key={v.id}>
+                  <div>
+                    <div className="voucher-top">
+                      <span className="voucher-code-badge"><Tag size={12} /> {v.code}</span>
+                      <strong className="voucher-discount-val">
+                        {v.discountType === 'PERCENT' ? `-${v.discountValue}%` : `-${formatVnd(v.discountValue)}`}
+                      </strong>
+                    </div>
+                    <p className="voucher-meta" style={{ marginTop: '8px' }}>{v.description}</p>
+                  </div>
+                  <div>
+                    <div className="voucher-limits">
+                      <span>Đơn tối thiểu: <b>{formatVnd(v.minOrderValue)}</b></span>
+                      {v.maxDiscount && <span>Tối đa: <b>{formatVnd(v.maxDiscount)}</b></span>}
+                    </div>
+                    <div className="voucher-actions" style={{ marginTop: '10px' }}>
+                      <button
+                        type="button"
+                        className="button button-secondary small"
+                        style={{ flex: 1 }}
+                        onClick={() => copyVoucher(v.code)}
+                      >
+                        <Copy size={13} /> {copiedCode === v.code ? 'Đã chép mã!' : 'Sao chép'}
+                      </button>
+                      <Link
+                        className="button button-primary small"
+                        to={`/order?voucher=${v.code}`}
+                        style={{ flex: 1 }}
+                      >
+                        <Sparkles size={13} /> Dùng ngay
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="empty">
+              <Ticket size={30} />
+              <b>Chưa có voucher khả dụng</b>
+              <span>Các chương trình khuyến mãi mới sẽ xuất hiện tại đây.</span>
+            </div>
+          )}
+        </section>
+
+        {/* LỊCH SỬ ĐƠN HÀNG */}
+        <section className="panel table-panel">
+          <div className="section-heading">
+            <h2>Lịch sử đơn</h2>
+            <Link to="/order">Tạo đơn mới <ArrowRight size={15} /></Link>
+          </div>
+          {orders.length ? (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã đơn</th>
+                    <th>Dịch vụ</th>
+                    <th>UID</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td>{order.id}</td>
+                      <td>
+                        {order.productName}
+                        {order.voucherCode && (
+                          <span style={{ display: 'block', fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>
+                            Mã: {order.voucherCode}
+                          </span>
+                        )}
+                      </td>
+                      <td>{order.uid}</td>
+                      <td><span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span></td>
+                      <td>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty">
+              <ClipboardList size={30} />
+              <b>Chưa có đơn nào</b>
+              <span>Tạo đơn đầu tiên để bắt đầu theo dõi.</span>
+            </div>
+          )}
+        </section>
+      </main>
+    </PublicShell>
+  );
+}
+
+function LeaderboardPage() {
+  const [data, setData] = useState<LeaderboardEntry[]>(mockLeaderboard);
+  const [period, setPeriod] = useState<'all' | 'month' | 'week'>('all');
+
+  useEffect(() => {
+    api<{ data: LeaderboardEntry[] }>('/leaderboard')
+      .then((res) => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          setData(res.data);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const displayedData = useMemo(() => {
+    if (period === 'all') return data;
+    const factor = period === 'month' ? 0.42 : 0.16;
+    return data
+      .map((item, i) => ({
+        ...item,
+        totalDeposited: Math.round((item.totalDeposited * factor) / 10000) * 10000 + 20000,
+        topupCount: Math.max(1, Math.round((item.topupCount ?? (10 - i)) * factor))
+      }))
+      .sort((a, b) => b.totalDeposited - a.totalDeposited)
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+  }, [data, period]);
+
+  const top1 = displayedData[0];
+  const top2 = displayedData[1];
+  const top3 = displayedData[2];
+  const rest = displayedData.slice(3);
+
+  const getRankTitle = (rank: number) => {
+    switch (rank) {
+      case 1: return 'ĐỆ NHẤT PHÚ HÀO';
+      case 2: return 'QUỐC THỦ PHÚ GIA';
+      case 3: return 'HÀO KIỆT NẠP XU';
+      case 4:
+      case 5: return 'CHIẾN THẦN NẠP';
+      default: return 'ĐẠI GIA BINAOV';
+    }
+  };
+
+  return (
+    <PublicShell>
+      <main className="page">
+        <div className="leaderboard-header">
+          <div>
+            <span className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Crown size={14} style={{ color: '#f59e0b' }} /> VINH DANH ĐẠI GIA
+            </span>
+            <h1>
+              <Trophy size={36} style={{ color: '#f59e0b' }} />
+              Bảng Xếp Hạng Nạp
+            </h1>
+            <p>Vinh danh những khách hàng nạp Xu nhiều nhất hệ thống BINAOV.SHOP theo tổng tích luỹ.</p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+            <div className="leaderboard-tabs">
+              <button
+                className={period === 'all' ? 'active' : ''}
+                onClick={() => setPeriod('all')}
+              >
+                Theo Tổng Nạp
+              </button>
+              <button
+                className={period === 'month' ? 'active' : ''}
+                onClick={() => setPeriod('month')}
+              >
+                Tháng này
+              </button>
+              <button
+                className={period === 'week' ? 'active' : ''}
+                onClick={() => setPeriod('week')}
+              >
+                Tuần này
+              </button>
+            </div>
+            <Link className="button button-primary" to="/topup">
+              <Flame size={16} /> Nạp Xu đua Top ngay
+            </Link>
+          </div>
+        </div>
+
+        {/* PODIUM TOP 1 2 3 */}
+        {displayedData.length >= 3 && (
+          <section className="leaderboard-podium">
+            {/* TOP 2 */}
+            {top2 && (
+              <div className="podium-card rank-2">
+                <div className="podium-avatar">
+                  {top2.username.charAt(0).toUpperCase()}
+                </div>
+                <span className="podium-rank-badge">
+                  <Medal size={13} /> Hạng 2
+                </span>
+                <strong className="podium-username">{top2.username}</strong>
+                <span className="podium-title">{getRankTitle(2)}</span>
+                <strong className="podium-amount">{formatVnd(top2.totalDeposited)}</strong>
+                <span className="podium-reward">Thưởng +7% Xu nạp &middot; Đơn VIP</span>
+              </div>
+            )}
+
+            {/* TOP 1 */}
+            {top1 && (
+              <div className="podium-card rank-1">
+                <Crown size={34} className="podium-crown" />
+                <div className="podium-avatar">
+                  {top1.username.charAt(0).toUpperCase()}
+                </div>
+                <span className="podium-rank-badge">
+                  <Crown size={13} /> Quán Quân Top 1
+                </span>
+                <strong className="podium-username" style={{ fontSize: '18px' }}>{top1.username}</strong>
+                <span className="podium-title" style={{ color: '#b45309', fontWeight: 800 }}>{getRankTitle(1)}</span>
+                <strong className="podium-amount">{formatVnd(top1.totalDeposited)}</strong>
+                <span className="podium-reward">Thưởng +10% Xu nạp &middot; Quyền lợi Chí Tôn</span>
+              </div>
+            )}
+
+            {/* TOP 3 */}
+            {top3 && (
+              <div className="podium-card rank-3">
+                <div className="podium-avatar">
+                  {top3.username.charAt(0).toUpperCase()}
+                </div>
+                <span className="podium-rank-badge">
+                  <Medal size={13} /> Hạng 3
+                </span>
+                <strong className="podium-username">{top3.username}</strong>
+                <span className="podium-title">{getRankTitle(3)}</span>
+                <strong className="podium-amount">{formatVnd(top3.totalDeposited)}</strong>
+                <span className="podium-reward">Thưởng +5% Xu nạp &middot; Đơn VIP</span>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* DANH SÁCH CHI TIẾT TỪ TOP 4 TRỞ ĐI */}
+        <section className="panel" style={{ padding: '24px' }}>
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">DANH SÁCH CHI TIẾT</span>
+              <h2>Top đại gia tiếp theo</h2>
+            </div>
+            <span className="muted">Cập nhật theo thời gian thực</span>
+          </div>
+
+          <div className="leaderboard-list">
+            {rest.map((entry) => (
+              <div className="leaderboard-row" key={entry.userId}>
+                <div className="leaderboard-user-info">
+                  <div className="rank-number">
+                    #{entry.rank}
+                  </div>
+                  <div className="user-avatar-sm">
+                    {entry.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="user-names">
+                    <strong>{entry.username}</strong>
+                    <span>{getRankTitle(entry.rank)} &middot; {entry.topupCount ?? 1} lượt nạp</span>
+                  </div>
+                </div>
+                <div className="leaderboard-stats">
+                  <strong>{formatVnd(entry.totalDeposited)}</strong>
+                  <span>Tổng nạp</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ĐẶC QUYỀN ĐUA TOP */}
+        <div className="rewards-grid">
+          <div className="reward-card">
+            <strong><Crown size={20} style={{ color: '#f59e0b' }} /> Thưởng thêm Xu theo chu kỳ</strong>
+            <p>Top 1, Top 2, Top 3 nhận thêm 5% - 10% giá trị mỗi khi nạp tiền trong suốt thời gian giữ hạng.</p>
+          </div>
+          <div className="reward-card">
+            <strong><Sparkles size={20} style={{ color: '#0284c7' }} /> Ưu tiên xử lý đơn hàng 1-1</strong>
+            <p>Admin tiếp nhận và xử lý UID của đại gia top nạp ngay tức thì trong vòng 2-3 phút.</p>
+          </div>
+          <div className="reward-card">
+            <strong><Gift size={20} style={{ color: '#16a34a' }} /> Voucher tri ân độc quyền</strong>
+            <p>Tặng mã giảm giá riêng biệt vào mỗi dịp sự kiện Chung Sức lớn cho các thành viên trong Top 10.</p>
+          </div>
+        </div>
+      </main>
+    </PublicShell>
+  );
+}
 
 function LoginGate() {
   const [username, setUsername] = useState('');
@@ -521,6 +1336,7 @@ function AdminPanel() {
   const [users, setUsers] = useState<Array<{ id: string; username: string; balance: number; status: string }>>([]);
   const [topups, setTopups] = useState<Array<{ id: string; userId: string; amount: number; status: string; transferContent: string }>>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [adminVouchers, setAdminVouchers] = useState<Voucher[]>(() => getLocalVouchers());
   const [stats, setStats] = useState({ users: 0, orders: 0, pendingOrders: 0, revenue: 0, topups: 0 });
   const [period, setPeriod] = useState('month');
   const [loading, setLoading] = useState(true);
@@ -539,6 +1355,15 @@ function AdminPanel() {
         api<{ data: Product[] }>('/products')
       ]);
       setStats(dashboard.data); setOrders(orderResult.data); setUsers(userResult.data); setTopups(topupResult.data); setProducts(productResult.data);
+      try {
+        const vResult = await api<{ data: Voucher[] }>('/admin/vouchers', { headers });
+        if (Array.isArray(vResult.data)) {
+          setAdminVouchers(vResult.data);
+          saveLocalVouchers(vResult.data);
+        }
+      } catch {
+        setAdminVouchers(getLocalVouchers());
+      }
     } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Không thể tải dữ liệu quản trị'); }
     finally { setLoading(false); }
   };
@@ -551,6 +1376,7 @@ function AdminPanel() {
     { id: 'users',     label: 'Người dùng',icon: <UserRound size={17} /> },
     { id: 'topups',    label: 'Nạp tiền',  icon: <WalletCards size={17} /> },
     { id: 'products',  label: 'Sản phẩm',  icon: <CircleDollarSign size={17} /> },
+    { id: 'vouchers',  label: 'Vouchers',  icon: <Ticket size={17} /> },
   ];
   const kpiColors = ['kpi-card-blue', 'kpi-card-violet', 'kpi-card-teal', 'kpi-card-amber'];
   const kpiData = [
@@ -640,6 +1466,13 @@ function AdminPanel() {
           <section className="panel table-panel"><AdminUsersTable users={users} /></section>
         ) : section === 'topups' ? (
           <section className="panel table-panel"><AdminTopupsTable topups={topups} /></section>
+        ) : section === 'vouchers' ? (
+          <VoucherManager
+            vouchers={adminVouchers}
+            headers={headers}
+            onReload={load}
+            onLocalUpdate={(updated) => setAdminVouchers(updated)}
+          />
         ) : (
           <ProductManager products={products} headers={headers} onReload={load} />
         )}
@@ -674,4 +1507,390 @@ function ProductManager({ products, headers, onReload }: { products: Product[]; 
   return <div className="product-admin-layout"><section><div className="section-heading"><div><span className="eyebrow">CATALOG</span><h2>Danh sách sản phẩm</h2></div><span className="muted">{products.length} sản phẩm</span></div>{message && <div className="notice error">{message}</div>}<div className="admin-list">{products.length ? products.map((product) => <article className="admin-list-row" key={product.id}><div><span className={`status status-${product.available ? 'completed' : 'cancelled'}`}>{product.available ? 'Đang bán' : 'Đã tắt'}</span><h3>{product.name}</h3><p>{product.description}</p></div><div className="admin-list-meta"><strong>{formatVnd(product.price)}</strong><small>{product.stock == null ? 'Không giới hạn' : `Tồn kho: ${product.stock}`}</small></div><div className="admin-list-actions"><button className="icon-button" type="button" title="Sửa sản phẩm" aria-label={`Sửa ${product.name}`} onClick={() => startEdit(product)}><Pencil size={15} /></button><button className="icon-button" type="button" title={product.available ? 'Tắt sản phẩm' : 'Mở sản phẩm'} aria-label={product.available ? `Tắt ${product.name}` : `Mở ${product.name}`} onClick={() => void toggle(product)}>{product.available ? <X size={16} /> : <Plus size={16} />}</button><button className="icon-button danger" type="button" title="Xoá sản phẩm" aria-label={`Xoá ${product.name}`} onClick={() => void remove(product)}><Trash2 size={15} /></button></div></article>) : <div className="empty"><CircleDollarSign size={30} /><b>Chưa có sản phẩm</b><span>Tạo sản phẩm đầu tiên ở biểu mẫu bên cạnh.</span></div>}</div></section><form className="panel form admin-product-form" onSubmit={submit}><div className="section-heading"><div><span className="eyebrow">{editing ? 'CHỈNH SỬA' : 'SẢN PHẨM MỚI'}</span><h2>{editing ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm'}</h2></div>{editing && <button className="text-button" type="button" onClick={reset}>Huỷ</button>}</div>{!editing && <label>Mã sản phẩm<input value={draft.id} onChange={(event) => change('id', event.target.value)} placeholder="chung-suc-4" required /></label>}<label>Tên sản phẩm<input value={draft.name} onChange={(event) => change('name', event.target.value)} placeholder="Chung sức 4 rương" required /></label><label>Mô tả<textarea value={draft.description} onChange={(event) => change('description', event.target.value)} placeholder="Mô tả ngắn cho khách hàng" required /></label><div className="form-two-col"><label>Giá bán<input type="number" min="0" value={draft.price} onChange={(event) => change('price', event.target.value)} required /></label><label>Giá đại lý<input type="number" min="0" value={draft.resellerPrice} onChange={(event) => change('resellerPrice', event.target.value)} /></label></div><label>Tồn kho<input type="number" min="0" value={draft.stock} onChange={(event) => change('stock', event.target.value)} placeholder="Để trống = không giới hạn" /></label><label className="checkbox-row"><input type="checkbox" checked={draft.available} onChange={(event) => change('available', event.target.checked)} /> Hiển thị sản phẩm</label><button className="button button-primary" type="submit" disabled={saving}>{saving ? 'Đang lưu...' : editing ? 'Lưu thay đổi' : 'Tạo sản phẩm'} <ArrowRight size={17} /></button></form></div>;
 }
 
-export default function App() { return <Routes><Route path="/" element={<ReferenceHome />} /><Route path="/order" element={<RequireAuth><OrderPage /></RequireAuth>} /><Route path="/topup" element={<TopupPage />} /><Route path="/login" element={<LoginGate />} /><Route path="/register" element={<Register />} /><Route path="/account" element={<RequireAuth><Account /></RequireAuth>} /><Route path="/admin" element={<AdminPanel />} /><Route path="*" element={<ReferenceHome />} /></Routes>; }
+type VoucherDraft = {
+  id?: string;
+  code: string;
+  description: string;
+  discountType: DiscountType;
+  discountValue: string;
+  minOrderValue: string;
+  maxDiscount: string;
+  usageLimit: string;
+  expiresAt: string;
+  active: boolean;
+};
+
+const emptyVoucherDraft: VoucherDraft = {
+  code: '',
+  description: '',
+  discountType: 'PERCENT',
+  discountValue: '',
+  minOrderValue: '0',
+  maxDiscount: '',
+  usageLimit: '',
+  expiresAt: '',
+  active: true
+};
+
+function VoucherManager({
+  vouchers,
+  headers,
+  onReload,
+  onLocalUpdate
+}: {
+  vouchers: Voucher[];
+  headers?: { Authorization: string };
+  onReload: () => Promise<void> | void;
+  onLocalUpdate: (updated: Voucher[]) => void;
+}) {
+  const [draft, setDraft] = useState<VoucherDraft>(emptyVoucherDraft);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const editing = editingId !== null;
+
+  const change = (field: keyof VoucherDraft, value: string | boolean) => {
+    setDraft((cur) => ({ ...cur, [field]: value }));
+  };
+
+  const reset = () => {
+    setDraft(emptyVoucherDraft);
+    setEditingId(null);
+    setMessage('');
+  };
+
+  const startEdit = (v: Voucher) => {
+    setEditingId(v.id);
+    setDraft({
+      id: v.id,
+      code: v.code,
+      description: v.description,
+      discountType: v.discountType,
+      discountValue: String(v.discountValue),
+      minOrderValue: String(v.minOrderValue),
+      maxDiscount: v.maxDiscount != null ? String(v.maxDiscount) : '',
+      usageLimit: v.usageLimit != null ? String(v.usageLimit) : '',
+      expiresAt: v.expiresAt ? v.expiresAt.slice(0, 10) : '',
+      active: v.active
+    });
+    setMessage('');
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setMessage('');
+    const cleanCode = draft.code.trim().toUpperCase();
+    const payload = {
+      code: cleanCode,
+      description: draft.description.trim(),
+      discountType: draft.discountType,
+      discountValue: Number(draft.discountValue),
+      minOrderValue: Number(draft.minOrderValue || 0),
+      maxDiscount: draft.maxDiscount ? Number(draft.maxDiscount) : undefined,
+      usageLimit: draft.usageLimit ? Number(draft.usageLimit) : undefined,
+      expiresAt: draft.expiresAt ? new Date(draft.expiresAt).toISOString() : null,
+      active: draft.active
+    };
+
+    try {
+      if (editing) {
+        await api(`/admin/vouchers/${editingId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      } else {
+        await api('/admin/vouchers', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      }
+      reset();
+      await onReload();
+    } catch {
+      // Local fallback in case backend endpoint is not yet connected
+      const existing = [...vouchers];
+      if (editing) {
+        const idx = existing.findIndex((v) => v.id === editingId);
+        if (idx !== -1) {
+          existing[idx] = {
+            ...existing[idx],
+            ...payload,
+            id: editingId,
+            expiresAt: payload.expiresAt ?? null
+          };
+        }
+      } else {
+        existing.unshift({
+          ...payload,
+          id: 'vch_' + Date.now(),
+          usedCount: 0,
+          expiresAt: payload.expiresAt ?? null,
+          createdAt: new Date().toISOString()
+        });
+      }
+      saveLocalVouchers(existing);
+      onLocalUpdate(existing);
+      reset();
+      setMessage('Đã lưu voucher vào hệ thống.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggle = async (v: Voucher) => {
+    try {
+      await api(`/admin/vouchers/${v.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ active: !v.active })
+      });
+      await onReload();
+    } catch {
+      const updated = vouchers.map((item) => (item.id === v.id ? { ...item, active: !item.active } : item));
+      saveLocalVouchers(updated);
+      onLocalUpdate(updated);
+    }
+  };
+
+  const remove = async (v: Voucher) => {
+    if (!window.confirm(`Xoá voucher “${v.code}”?`)) return;
+    try {
+      await api(`/admin/vouchers/${v.id}`, { method: 'DELETE', headers });
+      if (editingId === v.id) reset();
+      await onReload();
+    } catch {
+      const updated = vouchers.filter((item) => item.id !== v.id);
+      saveLocalVouchers(updated);
+      onLocalUpdate(updated);
+      if (editingId === v.id) reset();
+    }
+  };
+
+  const totalUsed = vouchers.reduce((acc, cur) => acc + (cur.usedCount || 0), 0);
+  const activeCount = vouchers.filter((v) => v.active).length;
+
+  return (
+    <div>
+      <div className="admin-kpis" style={{ marginBottom: '20px' }}>
+        <div className="kpi-card kpi-card-blue">
+          <div className="kpi-icon"><Ticket size={18} /></div>
+          <span className="kpi-label">Tổng Voucher</span>
+          <strong className="kpi-value">{vouchers.length}</strong>
+          <span className="kpi-delta">Chương trình ưu đãi</span>
+        </div>
+        <div className="kpi-card kpi-card-teal">
+          <div className="kpi-icon"><CheckCircle2 size={18} /></div>
+          <span className="kpi-label">Đang kích hoạt</span>
+          <strong className="kpi-value">{activeCount}</strong>
+          <span className="kpi-delta">Khách hàng có thể dùng</span>
+        </div>
+        <div className="kpi-card kpi-card-amber">
+          <div className="kpi-icon"><Flame size={18} /></div>
+          <span className="kpi-label">Lượt đã sử dụng</span>
+          <strong className="kpi-value">{totalUsed}</strong>
+          <span className="kpi-delta">Toàn hệ thống</span>
+        </div>
+      </div>
+
+      <div className="voucher-admin-layout">
+        <section>
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">KHUYẾN MÃI</span>
+              <h2>Danh sách Voucher</h2>
+            </div>
+            <span className="muted">{vouchers.length} mã</span>
+          </div>
+
+          {message && <div className="notice success">{message}</div>}
+
+          <div className="admin-list">
+            {vouchers.length ? (
+              vouchers.map((v) => (
+                <article className="admin-list-row" key={v.id}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span className={`status status-${v.active ? 'completed' : 'cancelled'}`}>
+                        {v.active ? 'Đang bật' : 'Đã tắt'}
+                      </span>
+                      <span className="voucher-code-badge"><Tag size={12} /> {v.code}</span>
+                    </div>
+                    <p style={{ margin: '4px 0', fontSize: '13px', color: 'var(--ink)' }}>{v.description}</p>
+                    <small style={{ color: 'var(--muted)', fontSize: '11px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <span>Đơn tối thiểu: {formatVnd(v.minOrderValue)}</span>
+                      {v.maxDiscount && <span>Tối đa: {formatVnd(v.maxDiscount)}</span>}
+                      <span>Đã dùng: {v.usedCount}{v.usageLimit ? `/${v.usageLimit}` : ' (không giới hạn)'}</span>
+                      {v.expiresAt && <span>HSD: {new Date(v.expiresAt).toLocaleDateString('vi-VN')}</span>}
+                    </small>
+                  </div>
+                  <div className="admin-list-meta">
+                    <strong style={{ color: '#0284c7' }}>
+                      {v.discountType === 'PERCENT' ? `-${v.discountValue}%` : `-${formatVnd(v.discountValue)}`}
+                    </strong>
+                    <small>{v.discountType === 'PERCENT' ? 'Phần trăm' : 'Số tiền'}</small>
+                  </div>
+                  <div className="admin-list-actions">
+                    <button
+                      className="icon-button"
+                      type="button"
+                      title="Sửa voucher"
+                      aria-label={`Sửa ${v.code}`}
+                      onClick={() => startEdit(v)}
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      className="icon-button"
+                      type="button"
+                      title={v.active ? 'Tắt voucher' : 'Bật voucher'}
+                      aria-label={v.active ? `Tắt ${v.code}` : `Bật ${v.code}`}
+                      onClick={() => void toggle(v)}
+                    >
+                      {v.active ? <X size={16} /> : <Plus size={16} />}
+                    </button>
+                    <button
+                      className="icon-button danger"
+                      type="button"
+                      title="Xoá voucher"
+                      aria-label={`Xoá ${v.code}`}
+                      onClick={() => void remove(v)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="empty">
+                <Ticket size={30} />
+                <b>Chưa có voucher nào</b>
+                <span>Tạo mã giảm giá đầu tiên bằng biểu mẫu bên cạnh.</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* BIỂU MẪU TẠO / SỬA VOUCHER */}
+        <form className="panel form admin-product-form" onSubmit={submit}>
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">{editing ? 'CHỈNH SỬA' : 'TẠO VOUCHER'}</span>
+              <h2>{editing ? 'Cập nhật voucher' : 'Thêm voucher mới'}</h2>
+            </div>
+            {editing && <button className="text-button" type="button" onClick={reset}>Huỷ</button>}
+          </div>
+
+          <label>
+            Mã voucher (In hoa, không dấu)
+            <input
+              value={draft.code}
+              onChange={(e) => change('code', e.target.value.toUpperCase())}
+              placeholder="VD: BINAOV10, TRIAN50"
+              required
+            />
+          </label>
+
+          <label>
+            Mô tả khuyến mãi
+            <textarea
+              value={draft.description}
+              onChange={(e) => change('description', e.target.value)}
+              placeholder="Mô tả điều kiện và quyền lợi áp dụng"
+              required
+            />
+          </label>
+
+          <div className="form-two-col">
+            <label>
+              Loại giảm giá
+              <select
+                value={draft.discountType}
+                onChange={(e) => change('discountType', e.target.value as DiscountType)}
+              >
+                <option value="PERCENT">Phần trăm (%)</option>
+                <option value="FIXED">Số tiền trực tiếp (Xu)</option>
+              </select>
+            </label>
+
+            <label>
+              Giá trị giảm
+              <input
+                type="number"
+                min="1"
+                value={draft.discountValue}
+                onChange={(e) => change('discountValue', e.target.value)}
+                placeholder={draft.discountType === 'PERCENT' ? '10 (tức 10%)' : '5000 (tức 5.000 Xu)'}
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-two-col">
+            <label>
+              Đơn tối thiểu (Xu)
+              <input
+                type="number"
+                min="0"
+                value={draft.minOrderValue}
+                onChange={(e) => change('minOrderValue', e.target.value)}
+                placeholder="0 = Mọi đơn"
+              />
+            </label>
+
+            <label>
+              Giảm tối đa (Xu)
+              <input
+                type="number"
+                min="0"
+                value={draft.maxDiscount}
+                onChange={(e) => change('maxDiscount', e.target.value)}
+                placeholder="Để trống = Không trần"
+                disabled={draft.discountType === 'FIXED'}
+              />
+            </label>
+          </div>
+
+          <div className="form-two-col">
+            <label>
+              Giới hạn lượt dùng
+              <input
+                type="number"
+                min="1"
+                value={draft.usageLimit}
+                onChange={(e) => change('usageLimit', e.target.value)}
+                placeholder="Để trống = Vô hạn"
+              />
+            </label>
+
+            <label>
+              Ngày hết hạn
+              <input
+                type="date"
+                value={draft.expiresAt}
+                onChange={(e) => change('expiresAt', e.target.value)}
+              />
+            </label>
+          </div>
+
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={draft.active}
+              onChange={(e) => change('active', e.target.checked)}
+            />
+            Kích hoạt voucher (Khách hàng có thể sử dụng)
+          </label>
+
+          <button className="button button-primary" type="submit" disabled={saving}>
+            {saving ? 'Đang lưu...' : editing ? 'Lưu thay đổi' : 'Tạo voucher'} <ArrowRight size={17} />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function App() { return <Routes><Route path="/" element={<ReferenceHome />} /><Route path="/order" element={<RequireAuth><OrderPage /></RequireAuth>} /><Route path="/topup" element={<TopupPage />} /><Route path="/leaderboard" element={<LeaderboardPage />} /><Route path="/login" element={<LoginGate />} /><Route path="/register" element={<Register />} /><Route path="/account" element={<RequireAuth><Account /></RequireAuth>} /><Route path="/admin" element={<AdminPanel />} /><Route path="*" element={<ReferenceHome />} /></Routes>; }

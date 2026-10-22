@@ -614,6 +614,7 @@ document.addEventListener('keydown', e => {
       <a href="index-2.html">Trang chủ</a>
       <a href="/order" target="_top">Tạo đơn</a>
       <a href="/topup" target="_top">Nạp tiền</a>
+      <a href="/leaderboard" target="_top">BXH Nạp</a>
       <a href="/account" target="_top">Hồ sơ</a>
     </nav>
     <div class="account-slot">
@@ -657,11 +658,11 @@ document.addEventListener('keydown', e => {
             <span>Acc clone giao ngay khi còn hàng</span>
           </div></div>
         </div>
-        <div class="quick-actions">
-          <a class="qa qa-pink" href="../auth/login/dang-nhap0ef2.html?next=order.php"><span>+</span><b>Tạo đơn</b></a>
-          <a class="qa" href="../auth/login/dang-nhapa7d2.html?next=deposit.php"><span>₫</span><b>Nạp tiền</b></a>
-          <a class="qa" href="../auth/login/dang-nhapb712.html?next=profile.php"><span>☺</span><b>Hồ sơ</b></a>
-          <a class="qa" href="../support/hotro.html"><span>?</span><b>Hỗ trợ</b></a>
+        <div class="quick-actions" style="grid-template-columns: repeat(4, 1fr);">
+          <a class="qa qa-pink" href="/order" target="_top"><span>+</span><b>Tạo đơn</b></a>
+          <a class="qa" href="/topup" target="_top"><span>₫</span><b>Nạp tiền</b></a>
+          <a class="qa" href="/leaderboard" target="_top"><span>🏆</span><b>BXH Nạp</b></a>
+          <a class="qa" href="/account" target="_top"><span>☺</span><b>Hồ sơ</b></a>
         </div>
         <div class="stats">
           <div class="stat"><b>5 phút</b><span>Thời gian xử lý</span></div>
@@ -685,6 +686,20 @@ document.addEventListener('keydown', e => {
               <p style="margin:0;font-size:13px;color:#64748b;">Quét mã QR tự động cộng Xu sau 1-2 phút &middot; Tối thiểu 20.000 Xu</p>
             </div>
             <a class="btn btn-pink" href="/topup" target="_top" style="font-weight:800;padding:10px 20px;">Nạp tiền ngay &rarr;</a>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px;background:linear-gradient(135deg,#0c4a6e,#0369a1);border-radius:18px;padding:16px;color:#fff;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <span class="tag" style="background:#f59e0b;color:#78350f;margin-bottom:6px;font-weight:900;">🏆 ĐUA TOP & VOUCHER</span>
+              <h3 style="margin:4px 0;font-size:17px;color:#fff;">Bảng Xếp Hạng Nạp & Kho Voucher Giảm Giá</h3>
+              <p style="margin:0;font-size:13px;color:#bae6fd;">Nhập mã giảm giá khi tạo đơn &middot; Vinh danh Top Đại Gia Nạp Xu</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <a class="btn" href="/leaderboard" target="_top" style="background:#fff;color:#0369a1;font-weight:800;padding:8px 16px;">Xem BXH</a>
+              <a class="btn btn-pink" href="/order" target="_top" style="font-weight:800;padding:8px 16px;">Dùng Voucher</a>
+            </div>
           </div>
         </div>
       </div>

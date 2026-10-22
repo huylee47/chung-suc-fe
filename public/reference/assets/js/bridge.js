@@ -131,7 +131,7 @@
     if (!link) return;
     const href = link.getAttribute('href');
     if (!href) return;
-    if (href.startsWith('/order') || href.startsWith('/topup') || href.startsWith('/account') || href.startsWith('/admin') || href.startsWith('/login') || href.startsWith('/register')) {
+    if (href.startsWith('/order') || href.startsWith('/topup') || href.startsWith('/account') || href.startsWith('/admin') || href.startsWith('/login') || href.startsWith('/register') || href.startsWith('/leaderboard')) {
       event.preventDefault();
       if (window.top) window.top.location.href = href;
       else window.location.href = href;
